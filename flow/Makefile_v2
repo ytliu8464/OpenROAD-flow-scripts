@@ -417,31 +417,25 @@ do-$(1)$(if $(4),$(4),):
 endef
 
 
-ifeq ($(SKIP_GP_MLBUF), 1)
-# If SKIP_GP_MLBUF is set to 1, we do not need to redo the floorplan
-
-else
 # STEP 1: Translate verilog to odb
 #-------------------------------------------------------------------------------
-$(eval $(call do-step,2_1_floorplan,$(RESULTS_DIR)/1_synth.v $(RESULTS_DIR)/1_synth.sdc $(TECH_LEF) $(SC_LEF) $(ADDITIONAL_LEFS) $(FOOTPRINT) $(SIG_MAP_FILE) $(FOOTPRINT_TCL) $(DONT_USE_SC_LIB),floorplan))
+# $(eval $(call do-step,2_1_floorplan,$(RESULTS_DIR)/1_synth.v $(RESULTS_DIR)/1_synth.sdc $(TECH_LEF) $(SC_LEF) $(ADDITIONAL_LEFS) $(FOOTPRINT) $(SIG_MAP_FILE) $(FOOTPRINT_TCL) $(DONT_USE_SC_LIB),floorplan))
 
-$(eval $(call do-copy,2_floorplan,2_1_floorplan.sdc,,.sdc))
+# $(eval $(call do-copy,2_floorplan,2_1_floorplan.sdc,,.sdc))
 
 # STEP 2: Macro Placement
 #-------------------------------------------------------------------------------
-$(eval $(call do-step,2_2_floorplan_macro,$(RESULTS_DIR)/2_1_floorplan.odb $(RESULTS_DIR)/1_synth.v $(RESULTS_DIR)/1_synth.sdc $(MACRO_PLACEMENT) $(MACRO_PLACEMENT_TCL),macro_place))
+# $(eval $(call do-step,2_2_floorplan_macro,$(RESULTS_DIR)/2_1_floorplan.odb $(RESULTS_DIR)/1_synth.v $(RESULTS_DIR)/1_synth.sdc $(MACRO_PLACEMENT) $(MACRO_PLACEMENT_TCL),macro_place))
 
 # STEP 3: Tapcell and Welltie insertion
 #-------------------------------------------------------------------------------
-$(eval $(call do-step,2_3_floorplan_tapcell,$(RESULTS_DIR)/2_2_floorplan_macro.odb $(TAPCELL_TCL),tapcell))
+# $(eval $(call do-step,2_3_floorplan_tapcell,$(RESULTS_DIR)/2_2_floorplan_macro.odb $(TAPCELL_TCL),tapcell))
 
 # STEP 4: PDN generation
 #-------------------------------------------------------------------------------
-$(eval $(call do-step,2_4_floorplan_pdn,$(RESULTS_DIR)/2_3_floorplan_tapcell.odb $(PDN_TCL),pdn))
+# $(eval $(call do-step,2_4_floorplan_pdn,$(RESULTS_DIR)/2_3_floorplan_tapcell.odb $(PDN_TCL),pdn))
 
-$(eval $(call do-copy,2_floorplan,2_4_floorplan_pdn.odb,))
-
-endif
+# $(eval $(call do-copy,2_floorplan,2_4_floorplan_pdn.odb,))
 
 $(RESULTS_DIR)/2_floorplan.sdc: $(RESULTS_DIR)/2_1_floorplan.odb
 
@@ -462,34 +456,32 @@ clean_floorplan:
 # |  __/| |___ / ___ \ |___| |___
 # |_|   |_____/_/   \_\____|_____|
 #
+.PHONY: mlbuf_place
+mlbuf_place: $(RESULTS_DIR)/3_place.odb \
+             $(RESULTS_DIR)/3_place.sdc
+
+# STEP 4: Resizing & Buffering
+#-------------------------------------------------------------------------------
+$(eval $(call do-step,3_4_place_resized,$(RESULTS_DIR)/3_3_place_gp.odb $(RESULTS_DIR)/2_floorplan.sdc,resize))
+
 
 .PHONY: place
 place: $(RESULTS_DIR)/3_place.odb \
        $(RESULTS_DIR)/3_place.sdc
-
-ifeq ($(SKIP_GP_MLBUF), 1)
-# STEP 4: Resizing & Buffering
-#-------------------------------------------------------------------------------
-$(eval $(call do-step,3_4_place_resized,$(RESULTS_DIR)/3_3_place_gp.odb $(RESULTS_DIR)/2_floorplan.sdc,resize))
-
-else
 # ==============================================================================
 # STEP 1: Global placement without placed IOs, timing-driven, and routability-driven.
 #-------------------------------------------------------------------------------
-$(eval $(call do-step,3_1_place_gp_skip_io,$(RESULTS_DIR)/2_floorplan.odb $(RESULTS_DIR)/2_floorplan.sdc $(LIB_FILES),global_place_skip_io))
+#$(eval $(call do-step,3_1_place_gp_skip_io,$(RESULTS_DIR)/2_floorplan.odb $(RESULTS_DIR)/2_floorplan.sdc $(LIB_FILES),global_place_skip_io))
 
-$(eval $(call do-step,3_2_place_iop,$(RESULTS_DIR)/3_1_place_gp_skip_io.odb $(IO_CONSTRAINTS),io_placement))
+#$(eval $(call do-step,3_2_place_iop,$(RESULTS_DIR)/3_1_place_gp_skip_io.odb $(IO_CONSTRAINTS),io_placement))
 
 # STEP 3: Global placement with placed IOs, timing-driven, and routability-driven.
 #-------------------------------------------------------------------------------
-$(eval $(call do-step,3_3_place_gp,$(RESULTS_DIR)/3_2_place_iop.odb $(RESULTS_DIR)/2_floorplan.sdc $(LIB_FILES),global_place))
+#$(eval $(call do-step,3_3_place_gp,$(RESULTS_DIR)/3_2_place_iop.odb $(RESULTS_DIR)/2_floorplan.sdc $(LIB_FILES),global_place))
 
 # STEP 4: Resizing & Buffering
 #-------------------------------------------------------------------------------
 $(eval $(call do-step,3_4_place_resized,$(RESULTS_DIR)/3_3_place_gp.odb $(RESULTS_DIR)/2_floorplan.sdc,resize))
-
-endif
-
 
 .PHONY: clean_resize
 clean_resize:
@@ -782,7 +774,7 @@ copy_inputs:
 	fi
 
 .PHONY: mlbuf_place_and_route
-mlbuf_place_and_route: copy_inputs place cts route finish 
+mlbuf_place_and_route: copy_inputs mlbuf_place_and_route cts route finish 
 
 .PHONY: all
 all: synth floorplan place cts route finish

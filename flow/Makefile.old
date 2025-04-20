@@ -7,7 +7,7 @@
 # ==============================================================================
 
 # DESIGN_CONFIG=./designs/nangate45/aes/config.mk
-# DESIGN_CONFIG=./designs/nangate45/ariane133/config.mk
+DESIGN_CONFIG=./designs/nangate45/ariane133/config.mk
 # DESIGN_CONFIG=./designs/nangate45/ariane136/config.mk
 # DESIGN_CONFIG=./designs/nangate45/black_parrot/config.mk
 # DESIGN_CONFIG=./designs/nangate45/bp_be_top/config.mk
@@ -145,6 +145,10 @@ endif
 export FLOW_HOME
 
 include $(FLOW_HOME)/scripts/variables.mk
+export LOG_DIR     = $(WORK_HOME)/logs/$(PLATFORM)/$(DESIGN_NICKNAME)/$(FLOW_VARIANT)
+export OBJECTS_DIR = $(WORK_HOME)/objects/$(PLATFORM)/$(DESIGN_NICKNAME)/$(FLOW_VARIANT)
+export REPORTS_DIR = $(WORK_HOME)/reports/$(PLATFORM)/$(DESIGN_NICKNAME)/$(FLOW_VARIANT)
+export RESULTS_DIR = $(WORK_HOME)/results/$(PLATFORM)/$(DESIGN_NICKNAME)/$(FLOW_VARIANT)
 
 define GENERATE_ABSTRACT_RULE
 ifeq ($(wildcard $(3)),)
@@ -165,6 +169,19 @@ $(1) $(2) &:
 	$$(UNSET_AND_MAKE) DESIGN_CONFIG=$(3) generate_abstract
 endif
 endef
+
+### Add for MLBuf Runs
+.PHONY: copy_inputs
+copy_inputs:
+	@if [ -d "$(INPUTS_DIR)" ]; then \
+		echo "[INFO] Copying inputs from $(INPUTS_DIR) to $(RESULTS_DIR)"; \
+		mkdir -p "$(RESULTS_DIR)"; \
+		cp -r "$(INPUTS_DIR)/." "$(RESULTS_DIR)/"; \
+	else \
+		echo "[WARNING] INPUTS_DIR $(INPUTS_DIR) does not exist. Skipping copy_inputs."; \
+	fi
+
+
 
 # Targets to harden Blocks in case of hierarchical flow is triggered
 .PHONY: build_macros
@@ -244,6 +261,10 @@ $(WRAPPED_LIBS):
 	mkdir -p $(OBJECTS_DIR)/lib
 	sed 's/library(\(.*\))/library(\1_mod)/g' $(filter %$(notdir $(@:_mod.lib=.lib)),$(WRAP_LIBS)) | sed 's/cell(\(.*\))/cell(\1_mod)/g' > $@
 
+
+
+
+
 # ==============================================================================
 #  ______   ___   _ _____ _   _ _____ ____ ___ ____
 # / ___\ \ / / \ | |_   _| | | | ____/ ___|_ _/ ___|
@@ -296,10 +317,14 @@ $(RESULTS_DIR)/1_synth.rtlil: $(YOSYS_DEPENDENCIES)
 $(RESULTS_DIR)/1_1_yosys.v: $(RESULTS_DIR)/1_synth.rtlil
 	$(UNSET_AND_MAKE) do-yosys
 
+#.PHONY: do-synth
+#do-synth:
+#	mkdir -p $(RESULTS_DIR) $(LOG_DIR) $(REPORTS_DIR)
+#	cp $(RESULTS_DIR)/1_1_yosys.v $(RESULTS_DIR)/1_synth.v
+
 .PHONY: do-synth
 do-synth:
-	mkdir -p $(RESULTS_DIR) $(LOG_DIR) $(REPORTS_DIR)
-	cp $(RESULTS_DIR)/1_1_yosys.v $(RESULTS_DIR)/1_synth.v
+	echo "Running synthesis step"
 
 $(RESULTS_DIR)/1_synth.v: $(RESULTS_DIR)/1_1_yosys.v
 	$(UNSET_AND_MAKE) do-synth
@@ -417,10 +442,6 @@ do-$(1)$(if $(4),$(4),):
 endef
 
 
-ifeq ($(SKIP_GP_MLBUF), 1)
-# If SKIP_GP_MLBUF is set to 1, we do not need to redo the floorplan
-
-else
 # STEP 1: Translate verilog to odb
 #-------------------------------------------------------------------------------
 $(eval $(call do-step,2_1_floorplan,$(RESULTS_DIR)/1_synth.v $(RESULTS_DIR)/1_synth.sdc $(TECH_LEF) $(SC_LEF) $(ADDITIONAL_LEFS) $(FOOTPRINT) $(SIG_MAP_FILE) $(FOOTPRINT_TCL) $(DONT_USE_SC_LIB),floorplan))
@@ -441,13 +462,15 @@ $(eval $(call do-step,2_4_floorplan_pdn,$(RESULTS_DIR)/2_3_floorplan_tapcell.odb
 
 $(eval $(call do-copy,2_floorplan,2_4_floorplan_pdn.odb,))
 
-endif
-
 $(RESULTS_DIR)/2_floorplan.sdc: $(RESULTS_DIR)/2_1_floorplan.odb
 
 .PHONY: do-floorplan
+#do-floorplan:
+#	$(UNSET_AND_MAKE) do-2_1_floorplan do-2_2_floorplan_macro do-2_3_floorplan_tapcell do-2_4_floorplan_pdn do-2_floorplan do-2_floorplan.sdc
+
+.PHONY: do-floorplan
 do-floorplan:
-	$(UNSET_AND_MAKE) do-2_1_floorplan do-2_2_floorplan_macro do-2_3_floorplan_tapcell do-2_4_floorplan_pdn do-2_floorplan do-2_floorplan.sdc
+	echo "Running floorplan steps"	
 
 .PHONY: clean_floorplan
 clean_floorplan:
@@ -462,17 +485,9 @@ clean_floorplan:
 # |  __/| |___ / ___ \ |___| |___
 # |_|   |_____/_/   \_\____|_____|
 #
-
 .PHONY: place
 place: $(RESULTS_DIR)/3_place.odb \
        $(RESULTS_DIR)/3_place.sdc
-
-ifeq ($(SKIP_GP_MLBUF), 1)
-# STEP 4: Resizing & Buffering
-#-------------------------------------------------------------------------------
-$(eval $(call do-step,3_4_place_resized,$(RESULTS_DIR)/3_3_place_gp.odb $(RESULTS_DIR)/2_floorplan.sdc,resize))
-
-else
 # ==============================================================================
 # STEP 1: Global placement without placed IOs, timing-driven, and routability-driven.
 #-------------------------------------------------------------------------------
@@ -487,9 +502,6 @@ $(eval $(call do-step,3_3_place_gp,$(RESULTS_DIR)/3_2_place_iop.odb $(RESULTS_DI
 # STEP 4: Resizing & Buffering
 #-------------------------------------------------------------------------------
 $(eval $(call do-step,3_4_place_resized,$(RESULTS_DIR)/3_3_place_gp.odb $(RESULTS_DIR)/2_floorplan.sdc,resize))
-
-endif
-
 
 .PHONY: clean_resize
 clean_resize:
@@ -765,27 +777,9 @@ clean_finish:
 #
 # ==============================================================================
 
-.PHONY: copy_inputs
-copy_inputs:
-	@if [ -d "$(INPUTS_DIR)" ]; then \
-		echo "[INFO] Copying inputs from $(INPUTS_DIR) to $(RESULTS_DIR)"; \
-		mkdir -p "$(RESULTS_DIR)"; \
-		cp -r "$(INPUTS_DIR)/." "$(RESULTS_DIR)/"; \
-		if [ -f "$(GP_ODB)" ]; then \
-			echo "[INFO] Copying GP_ODB_FILE: $(GP_ODB) to $(RESULTS_DIR)/3_3_place_gp.odb"; \
-			cp "$(GP_ODB)" "$(RESULTS_DIR)/3_3_place_gp.odb"; \
-		else \
-			echo "[WARNING] GP_ODB file $(GP_ODB) does not exist. Skipping."; \
-		fi \
-	else \
-		echo "[WARNING] INPUTS_DIR $(INPUTS_DIR) does not exist. Skipping copy_inputs."; \
-	fi
-
-.PHONY: mlbuf_place_and_route
-mlbuf_place_and_route: copy_inputs place cts route finish 
-
+### Modified for MLBuf
 .PHONY: all
-all: synth floorplan place cts route finish
+all: copy_inputs synth floorplan place cts route finish
 
 .PHONY: clean
 clean:
