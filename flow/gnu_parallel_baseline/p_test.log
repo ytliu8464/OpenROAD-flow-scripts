@@ -1,0 +1,5 @@
+[INFO] Copying inputs from /home/fetzfs_projects/MLBuf/flows/OR_in4	 zhiang@pdn	1745188540.000	     9.000	0	225	0	0	/home/fetzfs_projects/MLBuf/flows/OpenROAD-flow-scripts/flow/gnu_parallel_baseline/job_dir/ibex_hacky.sh
+12	 zhiang@npc	1745188540.000	    16.000	0	249	0	0	/home/fetzfs_projects/MLBuf/flows/OpenROAD-flow-scripts/flow/gnu_parallel_baseline/job_dir/jpeg_hacky.sh
+8	 zhiang@lvs	1745188540.000	    17.000	0	236	0	0	/home/fetzfs_projects/MLBuf/flows/OpenROAD-flow-scripts/flow/gnu_parallel_baseline/job_dir/ariane133_hacky.sh
+_inputs/ariane to ./results/nangate45/ariane133/hacky
+[WARNING] GP_ODB file /home/fetzfs_projects/MLBuf/flows/OR_baselines/ariane/ariane_hacky.odb does not exist. Skipping.

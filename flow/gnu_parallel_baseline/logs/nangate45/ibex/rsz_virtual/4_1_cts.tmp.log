@@ -1,0 +1,225 @@
+OpenROAD e69d93ffb92e02e755ed4277376296f3deaaa8d9 
+Features included (+) or not (-): +GPU +GUI +Python
+This program is licensed under the BSD-3 license. See the LICENSE file for details.
+Components of this program may be licensed under more restrictive licenses which must be honored.
+[INFO ORD-0030] Using 8 thread(s).
+source /home/fetzfs_projects/MLBuf/flows/OpenROAD-flow-scripts/flow/platforms/nangate45/setRC.tcl
+clock_tree_synthesis -sink_clustering_enable -balance_levels
+[INFO CTS-0050] Root buffer is CLKBUF_X3.
+[INFO CTS-0051] Sink buffer is CLKBUF_X3.
+[INFO CTS-0052] The following clock buffers will be used for CTS:
+                    CLKBUF_X3
+[INFO CTS-0049] Characterization buffer is CLKBUF_X3.
+[INFO CTS-0007] Net "clk_i" found for clock "core_clock".
+[INFO CTS-0011]  Clock net "clk_i" for macros has 1 sinks.
+[INFO CTS-0011]  Clock net "clk_i_regs" for registers has 995 sinks.
+[INFO CTS-0010]  Clock net "clk" has 937 sinks.
+[INFO CTS-0008] TritonCTS found 3 clock nets.
+[INFO CTS-0097] Characterization used 1 buffer(s) types.
+[INFO CTS-0200] 0 placement blockages have been identified.
+[INFO CTS-0201] 0 placed hard macros will be treated like blockages.
+[INFO CTS-0027] Generating H-Tree topology for net clk_i.
+[INFO CTS-0028]  Total number of sinks: 1.
+[INFO CTS-0090]  Sinks will be clustered based on buffer max cap.
+[INFO CTS-0030]  Number of static layers: 0.
+[INFO CTS-0020]  Wire segment unit: 14000  dbu (7 um).
+[INFO CTS-0023]  Original sink region: [(258265, 15225), (258265, 15225)].
+[INFO CTS-0024]  Normalized sink region: [(18.4475, 1.0875), (18.4475, 1.0875)].
+[INFO CTS-0025]     Width:  0.0000.
+[INFO CTS-0026]     Height: 0.0000.
+ Level 1
+    Direction: Vertical
+    Sinks per sub-region: 1
+    Sub-region size: 0.0000 X 0.0000
+[INFO CTS-0034]     Segment length (rounded): 1.
+[INFO CTS-0032]  Stop criterion found. Max number of sinks is 15.
+[INFO CTS-0035]  Number of sinks covered: 1.
+[INFO CTS-0200] 0 placement blockages have been identified.
+[INFO CTS-0201] 0 placed hard macros will be treated like blockages.
+[INFO CTS-0027] Generating H-Tree topology for net clk_i_regs.
+[INFO CTS-0028]  Total number of sinks: 995.
+[INFO CTS-0090]  Sinks will be clustered based on buffer max cap.
+[INFO CTS-0030]  Number of static layers: 0.
+[INFO CTS-0020]  Wire segment unit: 14000  dbu (7 um).
+[INFO CTS-0206] Best clustering solution was found from clustering size of 10 and clustering diameter of 50.
+[INFO CTS-0019]  Total number of sinks after clustering: 129.
+[INFO CTS-0024]  Normalized sink region: [(3.63179, 4.67583), (20.2547, 32.7825)].
+[INFO CTS-0025]     Width:  16.6229.
+[INFO CTS-0026]     Height: 28.1067.
+ Level 1
+    Direction: Vertical
+    Sinks per sub-region: 65
+    Sub-region size: 16.6229 X 14.0533
+[INFO CTS-0034]     Segment length (rounded): 8.
+ Level 2
+    Direction: Horizontal
+    Sinks per sub-region: 33
+    Sub-region size: 8.3115 X 14.0533
+[INFO CTS-0034]     Segment length (rounded): 4.
+ Level 3
+    Direction: Vertical
+    Sinks per sub-region: 17
+    Sub-region size: 8.3115 X 7.0267
+[INFO CTS-0034]     Segment length (rounded): 4.
+ Level 4
+    Direction: Horizontal
+    Sinks per sub-region: 9
+    Sub-region size: 4.1557 X 7.0267
+[INFO CTS-0034]     Segment length (rounded): 2.
+[INFO CTS-0032]  Stop criterion found. Max number of sinks is 15.
+[INFO CTS-0035]  Number of sinks covered: 129.
+[INFO CTS-0200] 0 placement blockages have been identified.
+[INFO CTS-0201] 0 placed hard macros will be treated like blockages.
+[INFO CTS-0027] Generating H-Tree topology for net clk.
+[INFO CTS-0028]  Total number of sinks: 937.
+[INFO CTS-0090]  Sinks will be clustered based on buffer max cap.
+[INFO CTS-0030]  Number of static layers: 0.
+[INFO CTS-0020]  Wire segment unit: 14000  dbu (7 um).
+[INFO CTS-0206] Best clustering solution was found from clustering size of 30 and clustering diameter of 50.
+[INFO CTS-0019]  Total number of sinks after clustering: 135.
+[INFO CTS-0024]  Normalized sink region: [(12.54, 1.03), (34.2234, 26.7689)].
+[INFO CTS-0025]     Width:  21.6834.
+[INFO CTS-0026]     Height: 25.7389.
+ Level 1
+    Direction: Vertical
+    Sinks per sub-region: 68
+    Sub-region size: 21.6834 X 12.8694
+[INFO CTS-0034]     Segment length (rounded): 6.
+ Level 2
+    Direction: Horizontal
+    Sinks per sub-region: 34
+    Sub-region size: 10.8417 X 12.8694
+[INFO CTS-0034]     Segment length (rounded): 6.
+ Level 3
+    Direction: Vertical
+    Sinks per sub-region: 17
+    Sub-region size: 10.8417 X 6.4347
+[INFO CTS-0034]     Segment length (rounded): 4.
+ Level 4
+    Direction: Horizontal
+    Sinks per sub-region: 9
+    Sub-region size: 5.4209 X 6.4347
+[INFO CTS-0034]     Segment length (rounded): 2.
+[INFO CTS-0032]  Stop criterion found. Max number of sinks is 15.
+[INFO CTS-0035]  Number of sinks covered: 135.
+[INFO CTS-0018]     Created 2 clock buffers.
+[INFO CTS-0012]     Minimum number of buffers in the clock path: 2.
+[INFO CTS-0013]     Maximum number of buffers in the clock path: 2.
+[INFO CTS-0015]     Created 2 clock nets.
+[INFO CTS-0016]     Fanout distribution for the current clock = 1:1..
+[INFO CTS-0017]     Max level of the clock tree: 1.
+[INFO CTS-0018]     Created 146 clock buffers.
+[INFO CTS-0012]     Minimum number of buffers in the clock path: 3.
+[INFO CTS-0013]     Maximum number of buffers in the clock path: 3.
+[INFO CTS-0015]     Created 146 clock nets.
+[INFO CTS-0016]     Fanout distribution for the current clock = 3:1, 4:1, 5:3, 6:6, 7:39, 8:70, 9:21, 10:3, 14:1..
+[INFO CTS-0017]     Max level of the clock tree: 4.
+[INFO CTS-0018]     Created 152 clock buffers.
+[INFO CTS-0012]     Minimum number of buffers in the clock path: 3.
+[INFO CTS-0013]     Maximum number of buffers in the clock path: 3.
+[INFO CTS-0015]     Created 152 clock nets.
+[INFO CTS-0016]     Fanout distribution for the current clock = 3:1, 4:4, 5:7, 6:30, 7:58, 8:39, 9:8, 11:1, 12:2, 13:1..
+[INFO CTS-0017]     Max level of the clock tree: 4.
+[INFO CTS-0124] Clock net "clk_i"
+[INFO CTS-0125]  Sinks 1
+[INFO CTS-0098] Clock net "clk_i_regs"
+[INFO CTS-0099]  Sinks 1096
+[INFO CTS-0100]  Leaf buffers 129
+[INFO CTS-0101]  Average sink wire length 114.85 um
+[INFO CTS-0102]  Path depth 2 - 3
+[INFO CTS-0207]  Leaf load cells 228
+[INFO CTS-0098] Clock net "clk"
+[INFO CTS-0099]  Sinks 1064
+[INFO CTS-0100]  Leaf buffers 135
+[INFO CTS-0101]  Average sink wire length 225.02 um
+[INFO CTS-0102]  Path depth 2 - 3
+[INFO CTS-0207]  Leaf load cells 228
+[INFO RSZ-0058] Using max wire length 640um.
+Placement Analysis
+---------------------------------
+total displacement       3197.8 u
+average displacement        0.2 u
+max displacement           12.0 u
+original HPWL          198816.7 u
+legalized HPWL         203997.2 u
+delta HPWL                    3 %
+
+repair_timing -verbose -setup_margin 0 -hold_margin 0 -repair_tns 100
+[INFO RSZ-0094] Found 727 endpoints with setup violations.
+[INFO RSZ-0099] Repairing 727 out of 727 (100.00%) violating endpoints...
+   Iter   | Removed | Resized | Inserted | Cloned |  Pin  |    WNS   |   TNS      |  Viol  | Worst
+          | Buffers |  Gates  | Buffers  |  Gates | Swaps |          |            | Endpts | Endpt
+---------------------------------------------------------------------------------------------------
+        0 |       0 |       0 |        0 |      0 |     0 |   -0.443 |      -84.6 |    727 | instr_addr_o[26]
+       10 |       0 |       0 |       26 |      0 |     3 |   -0.305 |      -71.9 |    727 | instr_addr_o[30]
+       20 |       0 |       1 |       41 |      0 |     7 |   -0.247 |      -69.3 |    727 | instr_addr_o[31]
+       30 |       0 |       1 |       64 |      0 |    10 |   -0.224 |      -47.4 |    727 | instr_addr_o[30]
+       40 |       0 |       1 |       84 |      0 |    14 |   -0.201 |      -45.8 |    727 | instr_addr_o[30]
+       50 |       0 |       4 |      101 |      0 |    17 |   -0.180 |      -44.9 |    727 | instr_addr_o[30]
+       60 |       0 |       6 |      117 |      1 |    20 |   -0.149 |      -36.6 |    727 | instr_addr_o[28]
+       70 |       0 |       7 |      130 |      1 |    23 |   -0.139 |      -32.0 |    727 | instr_addr_o[26]
+       80 |       0 |      11 |      133 |      2 |    26 |   -0.125 |      -23.4 |    727 | instr_addr_o[30]
+       90 |       0 |      14 |      136 |      2 |    31 |   -0.141 |      -21.6 |    727 | instr_addr_o[31]
+      100 |       0 |      21 |      136 |      2 |    34 |   -0.120 |      -21.3 |    727 | instr_addr_o[31]
+      110 |       0 |      26 |      142 |      2 |    36 |   -0.107 |      -19.6 |    727 | gen_regfile_ff.register_file_i.rf_reg_q\[606\]$_DFFE_PN0P_/D
+      120 |       0 |      28 |      161 |      2 |    39 |   -0.097 |      -15.8 |    727 | instr_addr_o[31]
+      125 |       0 |      28 |      161 |      2 |    39 |   -0.097 |      -15.8 |    727 | instr_addr_o[31]
+      130 |       0 |      28 |      170 |      2 |    41 |   -0.097 |      -15.8 |    727 | instr_addr_o[31]
+      140 |       0 |      34 |      172 |      2 |    44 |   -0.097 |      -15.8 |    727 | instr_addr_o[31]
+      150 |       0 |      38 |      180 |      2 |    47 |   -0.097 |      -15.8 |    727 | instr_addr_o[31]
+      160 |       0 |      43 |      183 |      2 |    51 |   -0.102 |      -15.8 |    727 | instr_addr_o[31]
+      161 |       0 |      34 |      176 |      2 |    44 |   -0.097 |      -15.8 |    727 | instr_addr_o[31]
+      165 |       0 |      34 |      176 |      2 |    44 |   -0.097 |      -15.8 |    727 | instr_addr_o[31]
+      170 |       0 |      36 |      180 |      2 |    45 |   -0.097 |      -15.7 |    727 | instr_addr_o[31]
+      180 |       0 |      42 |      180 |      2 |    49 |   -0.099 |      -15.8 |    727 | instr_addr_o[31]
+      185 |       0 |      37 |      180 |      2 |    45 |   -0.097 |      -15.7 |    727 | instr_addr_o[31]
+      190 |       0 |      39 |      182 |      2 |    46 |   -0.097 |      -15.7 |    727 | instr_addr_o[31]
+      198 |       0 |      42 |      182 |      2 |    47 |   -0.097 |      -15.6 |    727 | instr_addr_o[31]
+      200 |       0 |      42 |      182 |      2 |    48 |   -0.097 |      -15.6 |    727 | instr_addr_o[31]
+      208 |       0 |      45 |      182 |      3 |    49 |   -0.097 |      -15.6 |    726 | instr_addr_o[31]
+      210 |       0 |      46 |      182 |      3 |    49 |   -0.097 |      -15.6 |    726 | instr_addr_o[31]
+      220 |       0 |      54 |      184 |      3 |    50 |   -0.097 |      -15.6 |    726 | instr_addr_o[31]
+      228 |       0 |      51 |      183 |      3 |    50 |   -0.097 |      -15.6 |    726 | instr_addr_o[31]
+      230 |       0 |      51 |      185 |      3 |    50 |   -0.097 |      -15.6 |    726 | instr_addr_o[31]
+      240 |       0 |      53 |      199 |      4 |    52 |   -0.097 |      -15.4 |    726 | instr_addr_o[31]
+      244 |       0 |      54 |      200 |      4 |    52 |   -0.097 |      -15.4 |    725 | instr_addr_o[31]
+      250 |       0 |      55 |      200 |      6 |    54 |   -0.104 |      -16.9 |    725 | instr_addr_o[31]
+      260 |       0 |      60 |      202 |      6 |    58 |   -0.104 |      -16.9 |    725 | instr_addr_o[31]
+      270 |       0 |      64 |      202 |      6 |    64 |   -0.104 |      -16.9 |    725 | instr_addr_o[31]
+      275 |       0 |      56 |      201 |      4 |    52 |   -0.097 |      -15.4 |    725 | instr_addr_o[31]
+      279 |       0 |      57 |      201 |      4 |    54 |   -0.097 |      -15.4 |    723 | instr_addr_o[31]
+      280 |       0 |      57 |      201 |      4 |    54 |   -0.097 |      -15.4 |    723 | instr_addr_o[31]
+      280 |       0 |      57 |      201 |      4 |    54 |   -0.097 |      -15.4 |    722 | instr_addr_o[31]
+      281 |       0 |      57 |      201 |      4 |    54 |   -0.097 |      -15.4 |    721 | instr_addr_o[31]
+      285 |       0 |      57 |      201 |      5 |    55 |   -0.097 |      -15.4 |    720 | instr_addr_o[31]
+      286 |       0 |      57 |      201 |      5 |    55 |   -0.097 |      -15.4 |    719 | instr_addr_o[31]
+      287 |       0 |      57 |      201 |      5 |    55 |   -0.097 |      -15.4 |    718 | instr_addr_o[31]
+      288 |       0 |      57 |      201 |      5 |    55 |   -0.097 |      -15.4 |    717 | instr_addr_o[31]
+      290 |       0 |      57 |      207 |      5 |    55 |   -0.097 |      -15.3 |    716 | instr_addr_o[31]
+      290 |       0 |      57 |      207 |      5 |    55 |   -0.097 |      -15.3 |    715 | instr_addr_o[31]
+      291 |       0 |      57 |      207 |      5 |    55 |   -0.097 |      -15.3 |    714 | instr_addr_o[31]
+      292 |       0 |      57 |      207 |      5 |    55 |   -0.097 |      -15.3 |    713 | instr_addr_o[31]
+      293 |       0 |      57 |      207 |      5 |    55 |   -0.097 |      -15.3 |    712 | instr_addr_o[31]
+      294 |       0 |      57 |      207 |      5 |    55 |   -0.097 |      -15.3 |    711 | instr_addr_o[31]
+      295 |       0 |      57 |      207 |      5 |    55 |   -0.097 |      -15.3 |    710 | instr_addr_o[31]
+      296 |       0 |      57 |      207 |      5 |    55 |   -0.097 |      -15.3 |    709 | instr_addr_o[31]
+      297 |       0 |      57 |      207 |      5 |    55 |   -0.097 |      -15.3 |    708 | instr_addr_o[31]
+      298 |       0 |      57 |      207 |      5 |    55 |   -0.097 |      -15.3 |    707 | instr_addr_o[31]
+      299 |       0 |      57 |      207 |      5 |    55 |   -0.097 |      -15.3 |    706 | instr_addr_o[31]
+      300 |       0 |      57 |      207 |      5 |    55 |   -0.097 |      -15.3 |    706 | instr_addr_o[31]
+      300 |       0 |      57 |      207 |      5 |    55 |   -0.097 |      -15.3 |    705 | instr_addr_o[31]
+      301 |       0 |      57 |      207 |      5 |    55 |   -0.097 |      -15.3 |    704 | instr_addr_o[31]
+      304 |       0 |      57 |      209 |      5 |    56 |   -0.097 |      -15.3 |    702 | instr_addr_o[31]
+      305 |       0 |      57 |      209 |      5 |    56 |   -0.097 |      -15.3 |    701 | instr_addr_o[31]
+      306 |       0 |      57 |      209 |      5 |    56 |   -0.097 |      -15.3 |    700 | instr_addr_o[31]
+      307 |       0 |      57 |      209 |      5 |    56 |   -0.097 |      -15.3 |    699 | instr_addr_o[31]
+      308 |       0 |      57 |      209 |      5 |    56 |   -0.097 |      -15.3 |    698 | instr_addr_o[31]
+      309 |       0 |      57 |      209 |      5 |    56 |   -0.097 |      -15.3 |    697 | instr_addr_o[31]
+      310 |       0 |      57 |      209 |      5 |    56 |   -0.097 |      -15.3 |    697 | instr_addr_o[31]
+      310 |       0 |      57 |      209 |      5 |    56 |   -0.097 |      -15.3 |    696 | instr_addr_o[31]
+      311 |       0 |      57 |      209 |      5 |    56 |   -0.097 |      -15.3 |    695 | instr_addr_o[31]
+      312 |       0 |      57 |      209 |      5 |    56 |   -0.097 |      -15.3 |    694 | instr_addr_o[31]
+      313 |       0 |      57 |      209 |      5 |    56 |   -0.097 |      -15.3 |    693 | instr_addr_o[31]
+      320 |       0 |      57 |      212 |      7 |    58 |   -0.097 |      -12.3 |    693 | instr_addr_o[31]
+      330 |       0 |      57 |      234 |     11 |    59 |   -0.097 |       -9.4 |    693 | instr_addr_o[31]
+      340 |       0 |      58 |      250 |     14 |    61 |   -0.097 |       -4.9 |    693 | instr_addr_o[31]
