@@ -1,12 +1,12 @@
 # MLBuf ERC Checker
 
 ## Overview
-This project provides a Python script integrated with **OpenROAD** for checking **Electrical Rule Check (ERC) violations** and performing **buffer insertion** using **MLBuf** predictions or OR RSZ results.  
+This project provides a Python script integrated with **OpenROAD** for checking **Electrical Rule Check (ERC) violations** and performing **buffer insertion** using **MLBuf** predictions or OR rsz results.  
 
 It supports:
 - Loading technology LEF/Liberty and `.sdc` constraints.  
 - Reading placed design snapshots (`.odb`).  
-- Running **MLBuf-based buffer insertion** or fallback to **RSZ**.  
+- Running **MLBuf-based buffer insertion** or fallback to **OR rsz**.  
 - Checking **slew**, **capacitance**, and **fanout** violations.  
 - Logging all results to a file for reproducibility.  
 
@@ -15,7 +15,7 @@ It supports:
 ## Features
 - ✅ Integrates seamlessly with **OpenROAD Python API**.  
 - ✅ Checks and reports **ERC violations** (slew, capacitance, fanout).  
-- ✅ Optional **buffer insertion** based on MLBuf or RSZ CSV results.  
+- ✅ Optional **buffer insertion** based on MLBuf or OR rsz CSV results.  
 - ✅ Configurable paths.  
 - ✅ Detailed **logging system** (saves to file + console output).  
 - ✅ Support for **batch runs** across multiple input cases (e.g., `gp_01.odb` .. `gp_13.odb`).  
@@ -61,7 +61,7 @@ openroad -python mlbuf_checkERC_main.py \
   --design ibex \
   --tech nangate45
 ```
-### 2. Run with RSZ instead of MLBuf
+### 2. Run with OR rsz instead of MLBuf
 ``` bash
 openroad -python mlbuf_checkERC_main.py \
   -d ibex -t nangate45 --no-mlbuf
