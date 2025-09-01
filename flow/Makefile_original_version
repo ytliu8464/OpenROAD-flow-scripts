@@ -16,7 +16,7 @@
 # DESIGN_CONFIG=./designs/nangate45/bp_quad/config.mk
 # DESIGN_CONFIG=./designs/nangate45/dynamic_node/config.mk
 # DESIGN_CONFIG=./designs/nangate45/gcd/config.mk
-# DESIGN_CONFIG=./designs/nangate45/ibex/config.mk
+DESIGN_CONFIG=./designs/nangate45/ibex/config.mk
 # DESIGN_CONFIG=./designs/nangate45/jpeg/config.mk
 # DESIGN_CONFIG=./designs/nangate45/mempool_group/config.mk
 # DESIGN_CONFIG=./designs/nangate45/swerv/config.mk
@@ -219,7 +219,7 @@ $(OBJECTS_DIR)/klayout.lyt: $(KLAYOUT_TECH_FILE) $(OBJECTS_DIR)/klayout_tech.lef
 .PHONY: do-klayout
 do-klayout:
 ifeq ($(KLAYOUT_ENV_VAR_IN_PATH),valid)
-	SC_LEF_RELATIVE_PATH="$$\(env('FLOW_HOME')\)/$(shell realpath --relative-to=$(FLOW_HOME) $(SC_LEF))"; \
+	SC_LEF_RELATIVE_PATH="$(shell realpath --relative-to=$(RESULTS_DIR) $(SC_LEF))"; \
 	OTHER_LEFS_RELATIVE_PATHS=$$(echo "$(foreach file, $(OBJECTS_DIR)/klayout_tech.lef $(ADDITIONAL_LEFS),<lef-files>$$(realpath --relative-to=$(RESULTS_DIR) $(file))</lef-files>)"); \
 	sed 's,<lef-files>.*</lef-files>,<lef-files>'"$$SC_LEF_RELATIVE_PATH"'</lef-files>'"$$OTHER_LEFS_RELATIVE_PATHS"',g' $(KLAYOUT_TECH_FILE) > $(OBJECTS_DIR)/klayout.lyt
 else
@@ -417,10 +417,6 @@ do-$(1)$(if $(4),$(4),):
 endef
 
 
-ifeq ($(SKIP_GP_MLBUF), 1)
-# If SKIP_GP_MLBUF is set to 1, we do not need to redo the floorplan
-
-else
 # STEP 1: Translate verilog to odb
 #-------------------------------------------------------------------------------
 $(eval $(call do-step,2_1_floorplan,$(RESULTS_DIR)/1_synth.v $(RESULTS_DIR)/1_synth.sdc $(TECH_LEF) $(SC_LEF) $(ADDITIONAL_LEFS) $(FOOTPRINT) $(SIG_MAP_FILE) $(FOOTPRINT_TCL) $(DONT_USE_SC_LIB),floorplan))
@@ -441,8 +437,6 @@ $(eval $(call do-step,2_4_floorplan_pdn,$(RESULTS_DIR)/2_3_floorplan_tapcell.odb
 
 $(eval $(call do-copy,2_floorplan,2_4_floorplan_pdn.odb,))
 
-endif
-
 $(RESULTS_DIR)/2_floorplan.sdc: $(RESULTS_DIR)/2_1_floorplan.odb
 
 .PHONY: do-floorplan
@@ -462,17 +456,9 @@ clean_floorplan:
 # |  __/| |___ / ___ \ |___| |___
 # |_|   |_____/_/   \_\____|_____|
 #
-
 .PHONY: place
 place: $(RESULTS_DIR)/3_place.odb \
        $(RESULTS_DIR)/3_place.sdc
-
-ifeq ($(SKIP_GP_MLBUF), 1)
-# STEP 4: Resizing & Buffering
-#-------------------------------------------------------------------------------
-$(eval $(call do-step,3_4_place_resized,$(RESULTS_DIR)/3_3_place_gp.odb $(RESULTS_DIR)/2_floorplan.sdc,resize))
-
-else
 # ==============================================================================
 # STEP 1: Global placement without placed IOs, timing-driven, and routability-driven.
 #-------------------------------------------------------------------------------
@@ -487,9 +473,6 @@ $(eval $(call do-step,3_3_place_gp,$(RESULTS_DIR)/3_2_place_iop.odb $(RESULTS_DI
 # STEP 4: Resizing & Buffering
 #-------------------------------------------------------------------------------
 $(eval $(call do-step,3_4_place_resized,$(RESULTS_DIR)/3_3_place_gp.odb $(RESULTS_DIR)/2_floorplan.sdc,resize))
-
-endif
-
 
 .PHONY: clean_resize
 clean_resize:
@@ -764,42 +747,6 @@ clean_finish:
 # |_|  |_|___|____/ \____|
 #
 # ==============================================================================
-
-.PHONY: copy_inputs
-copy_inputs:
-	@if [ -d "$(INPUTS_DIR)" ]; then \
-		echo "[INFO] Copying inputs from $(INPUTS_DIR) to $(RESULTS_DIR)"; \
-		mkdir -p "$(RESULTS_DIR)"; \
-		cp -r "$(INPUTS_DIR)/." "$(RESULTS_DIR)/"; \
-		if [ -f "$(GP_ODB)" ]; then \
-			echo "[INFO] Copying GP_ODB_FILE: $(GP_ODB) to $(RESULTS_DIR)/3_3_place_gp.odb"; \
-			cp "$(GP_ODB)" "$(RESULTS_DIR)/3_3_place_gp.odb"; \
-		else \
-			echo "[WARNING] GP_ODB file $(GP_ODB) does not exist. Skipping."; \
-		fi \
-	else \
-		echo "[WARNING] INPUTS_DIR $(INPUTS_DIR) does not exist. Skipping copy_inputs."; \
-	fi
-
-
-.PHONY: rename_sdc
-rename_sdc:
-	@if [ -f "$(RESULTS_DIR)/1_synth_TCP.sdc" ]; then \
-		sed -i "s/\$${CLOCK_PERIOD}/$(CLOCK_PERIOD)/g" "$(RESULTS_DIR)/1_synth_TCP.sdc"; \
-		echo "[INFO] Renaming 1_synth_TCP.sdc to 2_floorplan.sdc in $(RESULTS_DIR)"; \
-		cp "$(RESULTS_DIR)/1_synth_TCP.sdc" "$(RESULTS_DIR)/2_floorplan.sdc"; \
-		echo "[INFO] Renaming 1_synth_TCP.sdc to 2_1_floorplan.sdc in $(RESULTS_DIR)"; \
-		cp "$(RESULTS_DIR)/1_synth_TCP.sdc" "$(RESULTS_DIR)/2_1_floorplan.sdc"; \
-		echo "[INFO] Renaming 1_synth_TCP.sdc to 1_synth.sdc in $(RESULTS_DIR)"; \
-		cp "$(RESULTS_DIR)/1_synth_TCP.sdc" "$(RESULTS_DIR)/1_synth.sdc"; \
-	else \
-		echo "[WARNING] $(RESULTS_DIR)/1_synth_TCP.sdc does not exist. Skipping rename."; \
-	fi
-
-.PHONY: mlbuf_place_and_route
-#mlbuf_place_and_route: copy_inputs rename_sdc place cts route finish 
-mlbuf_place_and_route: copy_inputs place cts route finish 
-
 
 .PHONY: all
 all: synth floorplan place cts route finish
