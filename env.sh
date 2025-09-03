@@ -11,7 +11,8 @@ function __setpaths() {
 
   # Set user paths and environment variables here,
   # developer settings go in ./dev_env.sh
-  export PATH=${DIR}/tools/install/OpenROAD/bin:$PATH
+  #export PATH=${DIR}/tools/install/OpenROAD/bin:$PATH
+  export PATH=/home/fetzfs_projects/MLBuf/flows/OR_default/OpenROAD/build/src:$PATH
   export PATH=${DIR}/tools/install/yosys/bin:$PATH
 
   if [[ "$OSTYPE" == "darwin"* ]]; then
