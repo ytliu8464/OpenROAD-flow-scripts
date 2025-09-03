@@ -781,8 +781,25 @@ copy_inputs:
 		echo "[WARNING] INPUTS_DIR $(INPUTS_DIR) does not exist. Skipping copy_inputs."; \
 	fi
 
+
+.PHONY: rename_sdc
+rename_sdc:
+	@if [ -f "$(RESULTS_DIR)/1_synth_TCP.sdc" ]; then \
+		sed -i "s/\$${CLOCK_PERIOD}/$(CLOCK_PERIOD)/g" "$(RESULTS_DIR)/1_synth_TCP.sdc"; \
+		echo "[INFO] Renaming 1_synth_TCP.sdc to 2_floorplan.sdc in $(RESULTS_DIR)"; \
+		cp "$(RESULTS_DIR)/1_synth_TCP.sdc" "$(RESULTS_DIR)/2_floorplan.sdc"; \
+		echo "[INFO] Renaming 1_synth_TCP.sdc to 2_1_floorplan.sdc in $(RESULTS_DIR)"; \
+		cp "$(RESULTS_DIR)/1_synth_TCP.sdc" "$(RESULTS_DIR)/2_1_floorplan.sdc"; \
+		echo "[INFO] Renaming 1_synth_TCP.sdc to 1_synth.sdc in $(RESULTS_DIR)"; \
+		cp "$(RESULTS_DIR)/1_synth_TCP.sdc" "$(RESULTS_DIR)/1_synth.sdc"; \
+	else \
+		echo "[WARNING] $(RESULTS_DIR)/1_synth_TCP.sdc does not exist. Skipping rename."; \
+	fi
+
 .PHONY: mlbuf_place_and_route
+#mlbuf_place_and_route: copy_inputs rename_sdc place cts route finish 
 mlbuf_place_and_route: copy_inputs place cts route finish 
+
 
 .PHONY: all
 all: synth floorplan place cts route finish
