@@ -1,8 +1,7 @@
 #!/bin/bash
-export PROJ_DIR="/home/fetzfs_projects/timer_calibration/MLBuf_reproduce/MLBuf_MLCAD"
-#export OPENROAD_EXE="${PROJ_DIR}/OR_branch_integration/OpenROAD/build/src/openroad"
-export OPENROAD_EXE="/home/fetzfs_projects/MLBuf/flows/OR_branch_integration/OpenROAD/build_os8/src/openroad"
-export FLOW_HOME="/home/fetzfs_projects/timer_calibration/ORFS_mlbuf_erc/OpenROAD-flow-scripts/flow"
+export PROJ_DIR="/home/MLBuf_MLCAD"
+export OPENROAD_EXE="${PROJ_DIR}/OR_branch_integration/OpenROAD/build/src/openroad"
+export FLOW_HOME="/home/OpenROAD-flow-scripts/flow"
 
 export DESIGN="jpeg"
 export DESIGN_FULL_NAME="jpeg_encoder"
