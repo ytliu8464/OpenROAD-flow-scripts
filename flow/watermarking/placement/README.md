@@ -2,6 +2,14 @@
 
 External Python tools that embed and verify **row-parity** constraints on a **post-detailed-placement** OpenDB (`.odb`), without modifying OpenROAD.
 
+## Usage
+```bash
+./run_place_wm.sh  # apply watermarking to the placement solution
+# ./run_place_wm.sh 
+./run_ppa.sh # start with the watermarked placement and run cts grt drt to get post-route PPA results
+./run_verify_stages.sh # verify the watermarks across stages
+```
+
 ## Row index convention
 
 Physical `dbRow` bottoms are sorted by ascending Y. Index `0` is the **bottom-most** row. Constraint parity `0` means the instance must sit on an **even** row index; `1` means **odd**.
@@ -24,7 +32,9 @@ Default flow uses the same `.sif` path as `run.sh` (`SINGULARITY_SIF` overrides)
 | `watermark_common.py` | Row indexing, HMAC seeding, binomial Pc, argv cleanup |
 | `watermark_embed.py` | Select cells, assign parities, swap / nudge rows, incremental `detailedPlacement`, write `.odb`/`.def` |
 | `watermark_verify.py` | Reload design, re-derive constraints, count satisfied / Pc |
-| `run.sh` | `singularity exec ... env ... openroad -python -exit ...` |
+| `watermark_verify_stages.py` | Read embed CSV as ground truth; verify those cells across multiple `.odb` checkpoints (post-CTS, post-GRT, post-DRT, etc.) |
+| `run_verify_stages.sh` | Defaults for AES + PPA results; runs `watermark_verify_stages.py` in Singularity |
+| `place_wm.sh` | `embed`, `verify`, `verify_stages`, or `all` inside Singularity |
 
 ## Quick start (AES example)
 
@@ -50,6 +60,30 @@ export WM_VERIFY_INPUT="${AES_RES}/3_place_watermarked.odb"
 `./run.sh all` runs embed then verify, and **always** sets `WM_VERIFY_INPUT` to `WM_OUTPUT_ODB` so a stale `WM_VERIFY_INPUT` from an earlier session cannot point at the wrong file.
 
 `watermark_verify.py` exits `0` if all constraints are satisfied after legalization, `2` otherwise (still prints Pc).
+
+## Multi-stage verification (post-CTS / GRT / DRT)
+
+CTS and routing can move or resize logic; **do not** re-run `watermark_selection` on later ODBs (new clock buffers change the sorted cell list). Use the **embed CSV** (`wm_cells_embed.csv`) as the list of watermarked instances and required parities.
+
+From `flow/watermarking/placement`:
+
+```bash
+chmod +x run_verify_stages.sh place_wm.sh
+# Defaults: WM_CELL_LIST=.../wm_cells_embed.csv and stages under
+#   results/nangate45/aes/watermarking-test1-ppa/{4_cts,5_1_grt,5_route,6_final}.odb
+./run_verify_stages.sh
+```
+
+Or via `place_wm.sh` (same env vars):
+
+```bash
+export WM_CELL_LIST="${AES_RES}/wm_cells_embed.csv"
+export WM_VERIFY_STAGES="post_cts:/path/4_cts.odb,post_grt:/path/5_1_grt.odb,post_drt:/path/5_route.odb"
+export WM_STAGE_REPORT="${AES_RES}/wm_stage_report.csv"   # optional
+./place_wm.sh verify_stages
+```
+
+`WM_VERIFY_STAGES` is comma-separated `label:absolute_path.odb`. With `--output-csv` / `WM_STAGE_REPORT`, one row per watermark cell and columns `{stage}_row_idx`, `{stage}_satisfied` per checkpoint. Exit `0` only if every stage completes and every cell satisfies parity at every stage; otherwise `2`.
 
 ## Direct `openroad` invocation
 

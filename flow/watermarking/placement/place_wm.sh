@@ -14,6 +14,7 @@ usage() {
 Usage:
   $0 embed
   $0 verify
+  $0 verify_stages // disabled, please use run_verify_stages.sh instead
   $0 all
 
 Environment (embed):
@@ -31,6 +32,12 @@ Environment (verify):
   WM_VERIFY_INPUT       watermarked .odb
   WM_VERIFY_CELL_LIST   optional output CSV of verification results
   (reuse WM_MESSAGE, WM_KEY, WM_NUM_CELLS)
+
+Environment (verify_stages) [Please use run_verify_stages.sh instead]:
+  WM_CELL_LIST          embed CSV (ground truth cell names + parities)
+  WM_VERIFY_STAGES      comma-separated label:odb_path pairs
+  WM_STAGE_REPORT       optional per-cell x stage CSV output path
+  WM_DBU_PER_MICRON     DBU per micron for Y display in failure lines (default 2000)
 
 Example:
   export WM_INPUT=.../3_place.odb WM_OUTPUT_ODB=.../3_place_wm.odb WM_OUTPUT_DEF=.../3_place_wm.def
@@ -53,6 +60,10 @@ run_in_singularity() {
     WM_OUTPUT_CELL_LIST="${WM_OUTPUT_CELL_LIST:-}" \
     WM_VERIFY_INPUT="${WM_VERIFY_INPUT:-}" \
     WM_VERIFY_CELL_LIST="${WM_VERIFY_CELL_LIST:-}" \
+    WM_CELL_LIST="${WM_CELL_LIST:-}" \
+    # WM_VERIFY_STAGES="${WM_VERIFY_STAGES:-}" \
+    WM_STAGE_REPORT="${WM_STAGE_REPORT:-}" \
+    WM_DBU_PER_MICRON="${WM_DBU_PER_MICRON:-2000}" \
     WM_MESSAGE="${WM_MESSAGE:-}" \
     WM_KEY="${WM_KEY:-}" \
     WM_NUM_CELLS="${WM_NUM_CELLS:-100}" \
@@ -68,6 +79,9 @@ case "${1:-}" in
   verify)
     run_in_singularity "export PYTHONPATH=\"${SCRIPT_DIR}:\${PYTHONPATH:-}\" ; cd \"${SCRIPT_DIR}\" ; \"${OPENROAD_EXE}\" -python -exit \"${SCRIPT_DIR}/watermark_verify.py\""
     ;;
+  # verify_stages)
+  #   run_in_singularity "export PYTHONPATH=\"${SCRIPT_DIR}:\${PYTHONPATH:-}\" ; cd \"${SCRIPT_DIR}\" ; \"${OPENROAD_EXE}\" -python -exit \"${SCRIPT_DIR}/watermark_verify_stages.py\""
+  #   ;;
   all)
     "$0" embed
     # Always verify the file we just wrote (ignore a stale WM_VERIFY_INPUT).

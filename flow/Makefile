@@ -390,6 +390,11 @@ do-$(1)$(if $(4),$(4),):
 	cp $(RESULTS_DIR)/$(2) $(RESULTS_DIR)/$(1)$(if $(4),$(4),.odb)
 endef
 
+# ifeq ($(SKIP_DP_WM), 1)
+ifneq ($(filter 1,$(SKIP_DP_WM) $(SKIP_RT_WM)),)
+# If SKIP_DP_WM or SKIP_RT_WM is set to 1, we do not need to redo the floorplan
+
+else
 # ==============================================================================
 
 # Custom target to go from synthesis to placement in a single OpenROAD run
@@ -437,6 +442,8 @@ clean_floorplan:
 	rm -f $(REPORTS_DIR)/2_*
 	rm -f $(LOG_DIR)/2_*
 
+endif
+
 # ==============================================================================
 #  ____  _        _    ____ _____
 # |  _ \| |      / \  / ___| ____|
@@ -447,6 +454,12 @@ clean_floorplan:
 .PHONY: place
 place: $(RESULTS_DIR)/3_place.odb \
        $(RESULTS_DIR)/3_place.sdc
+
+# ifeq ($(SKIP_DP_WM), 1)
+ifneq ($(filter 1,$(SKIP_DP_WM) $(SKIP_RT_WM)),)
+# If SKIP_DP_WM or SKIP_RT_WM is set to 1, we do not need to redo the placement
+
+else
 # ==============================================================================
 # STEP 1: Global placement without placed IOs, timing-driven, and routability-driven.
 #-------------------------------------------------------------------------------
@@ -494,6 +507,8 @@ clean_place:
 	rm -f $(REPORTS_DIR)/3_*
 	rm -f $(LOG_DIR)/3_*
 
+endif
+
 
 # ==============================================================================
 #   ____ _____ ____
@@ -507,6 +522,10 @@ cts: $(RESULTS_DIR)/4_cts.odb \
      $(RESULTS_DIR)/4_cts.sdc
 # ==============================================================================
 
+ifeq ($(SKIP_RT_WM), 1)
+# If SKIP_RT_WM is set to 1, we do not need to redo the cts
+
+else
 # Run TritonCTS
 # ------------------------------------------------------------------------------
 $(eval $(call do-step,4_1_cts,$(RESULTS_DIR)/3_place.odb $(RESULTS_DIR)/3_place.sdc,cts))
@@ -525,6 +544,7 @@ clean_cts:
 	rm -f  $(REPORTS_DIR)/4_*
 	rm -rf $(LOG_DIR)/4_*
 
+endif
 
 # ==============================================================================
 #  ____   ___  _   _ _____ ___ _   _  ____
@@ -749,6 +769,46 @@ clean_finish:
 # |_|  |_|___|____/ \____|
 #
 # ==============================================================================
+
+.PHONY: copy_inputs
+copy_inputs:
+	@if [ -d "$(INPUTS_DIR)" ]; then \
+		echo "[INFO] Copying inputs from $(INPUTS_DIR) to $(RESULTS_DIR)"; \
+		mkdir -p "$(RESULTS_DIR)"; \
+		cp -r "$(INPUTS_DIR)/." "$(RESULTS_DIR)/"; \
+		if [ -f "$(DP_ODB)" ]; then \
+			echo "[INFO] Copying DP_ODB_FILE: $(DP_ODB) to $(RESULTS_DIR)/3_place.odb"; \
+			cp "$(DP_ODB)" "$(RESULTS_DIR)/3_place.odb"; \
+		else \
+			echo "[WARNING] DP_ODB file $(DP_ODB) does not exist. Skipping."; \
+		fi \
+	else \
+		echo "[WARNING] INPUTS_DIR $(INPUTS_DIR) does not exist. Skipping copy_inputs."; \
+	fi
+
+.PHONY: copy_inputs_v2
+copy_inputs_v2:
+	@if [ -d "$(INPUTS_DIR)" ]; then \
+		echo "[INFO] Copying inputs from $(INPUTS_DIR) to $(RESULTS_DIR)"; \
+		mkdir -p "$(RESULTS_DIR)"; \
+		cp -r "$(INPUTS_DIR)/." "$(RESULTS_DIR)/"; \
+		if [ -f "$(CTS_ODB)" ]; then \
+			echo "[INFO] Copying CTS_ODB_FILE: $(CTS_ODB) to $(RESULTS_DIR)/4_cts.odb"; \
+			cp "$(CTS_ODB)" "$(RESULTS_DIR)/4_cts.odb"; \
+		else \
+			echo "[WARNING] CTS_ODB file $(CTS_ODB) does not exist. Skipping."; \
+		fi \
+	else \
+		echo "[WARNING] INPUTS_DIR $(INPUTS_DIR) does not exist. Skipping copy_inputs."; \
+	fi
+
+
+.PHONY: wm_cts_and_route 
+wm_cts_and_route: copy_inputs cts route finish 
+
+
+.PHONY: wm_route 
+wm_route: copy_inputs_v2 route finish 
 
 .PHONY: check-openroad
 check-openroad:

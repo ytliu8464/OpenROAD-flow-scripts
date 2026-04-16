@@ -9,6 +9,7 @@ export WM_MESSAGE='Placed-with-watermark-test' WM_KEY='This-is-a-secret-key' WM_
 
 # ./place_wm.sh embed          # embed only
 # ./place_wm.sh verify         # set WM_VERIFY_INPUT first, or use ./place_wm.sh all
+# ./place_wm.sh verify_stages  # verify the watermarks across stages
 # ./place_wm.sh all            # embed then verify
 
 ./place_wm.sh all
