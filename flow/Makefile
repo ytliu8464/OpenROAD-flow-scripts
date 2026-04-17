@@ -806,9 +806,11 @@ copy_inputs_v2:
 .PHONY: wm_cts_and_route 
 wm_cts_and_route: copy_inputs cts route finish 
 
-
 .PHONY: wm_route 
 wm_route: copy_inputs_v2 route finish 
+
+.PHONY: wm_route_wrong_way
+wm_route_wrong_way: copy_inputs_v2 route finish 
 
 .PHONY: check-openroad
 check-openroad:
