@@ -1,0 +1,81 @@
+[2026-04-27 23:59:38] [run_place_wm] logging to /home/fetzfs_projects/MISC-ytliu/watermarking/OR0415/OpenROAD-flow-scripts/flow/watermarking/place_ordering/wm_log/aes_run_place_wm_ordering_20260427_235938.log
+[2026-04-27 23:59:39] [run_place_wm] design : aes/asap7/base
+[2026-04-27 23:59:39] [run_place_wm] seed   : /home/fetzfs_projects/MISC-ytliu/watermarking/OR0415/OpenROAD-flow-scripts/flow/watermarking/gen_key/out/aes/seed_placement.hex
+[2026-04-27 23:59:39] [run_place_wm] input  : /home/fetzfs_projects/MISC-ytliu/watermarking/OR0415/OpenROAD-flow-scripts/flow/watermarking/place_ordering/../../results/asap7/aes/base/3_place.odb
+[2026-04-27 23:59:39] [run_place_wm] output : /home/fetzfs_projects/MISC-ytliu/watermarking/OR0415/OpenROAD-flow-scripts/flow/watermarking/place_ordering/../../results/asap7/aes/base/3_place_order_wm_1um.odb
+[2026-04-27 23:59:39] [run_place_wm] grid   : 8x8, pair_dist=1um, pairs/tile=4, groups/tile=2, use_groups=0
+[2026-04-27 23:59:39] [run_place_wm] timing : slack>=0.05ns, sdc=/home/fetzfs_projects/MISC-ytliu/watermarking/OR0415/OpenROAD-flow-scripts/flow/watermarking/place_ordering/../../results/asap7/aes/base/3_place.sdc
+[2026-04-27 23:59:39] [run_place_wm] starting embed + verify
+OpenROAD 7bc63749c8850e2937c58b0c3258a5df23db98ae 
+Features included (+) or not (-): +GPU +GUI +Python
+This program is licensed under the BSD-3 license. See the LICENSE file for details.
+Components of this program may be licensed under more restrictive licenses which must be honored.
+[WARNING ORD-0039] .openroad ignored with -python
+[2026-04-27 23:59:40] [wm_embed +    0.01s] start
+[2026-04-27 23:59:40] [wm_embed +    0.01s] input=/home/fetzfs_projects/MISC-ytliu/watermarking/OR0415/OpenROAD-flow-scripts/flow/watermarking/place_ordering/../../results/asap7/aes/base/3_place.odb
+[2026-04-27 23:59:40] [wm_embed +    0.01s] output_odb=/home/fetzfs_projects/MISC-ytliu/watermarking/OR0415/OpenROAD-flow-scripts/flow/watermarking/place_ordering/../../results/asap7/aes/base/3_place_order_wm_1um.odb
+[2026-04-27 23:59:40] [wm_embed +    0.01s] params grid=8x8 pair_dist=1.0um pairs_per_tile=4 groups_per_tile=2 use_groups=0 slack_threshold=0.05ns
+[2026-04-27 23:59:40] [wm_embed +    0.06s] reading input ODB
+[2026-04-27 23:59:40] [wm_embed +    0.11s] read ODB done in 0.05s
+[2026-04-27 23:59:40] [wm_embed +    0.11s] collecting and pre-filtering movable core cells
+[2026-04-27 23:59:40] [wm_embed +    0.29s] pre-filter done in 0.18s: movable=14764 single_row=14764 pre_sta=14587
+[2026-04-27 23:59:40] [wm_embed +    0.29s] starting STA slack filter (read_liberty/read_sdc/estimate_parasitics/pin slack)
+[WARNING STA-1212] /home/fetzfs_projects/MISC-ytliu/watermarking/OR0415/OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_SIMPLE_RVT_TT_nldm_211120.lib.gz line 13178, timing group from output port.
+[WARNING STA-1212] /home/fetzfs_projects/MISC-ytliu/watermarking/OR0415/OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_SIMPLE_RVT_TT_nldm_211120.lib.gz line 13211, timing group from output port.
+[WARNING STA-1212] /home/fetzfs_projects/MISC-ytliu/watermarking/OR0415/OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_SIMPLE_RVT_TT_nldm_211120.lib.gz line 13244, timing group from output port.
+[WARNING STA-1212] /home/fetzfs_projects/MISC-ytliu/watermarking/OR0415/OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_SIMPLE_RVT_TT_nldm_211120.lib.gz line 13277, timing group from output port.
+[WARNING STA-1212] /home/fetzfs_projects/MISC-ytliu/watermarking/OR0415/OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_SIMPLE_RVT_TT_nldm_211120.lib.gz line 13310, timing group from output port.
+[WARNING STA-1212] /home/fetzfs_projects/MISC-ytliu/watermarking/OR0415/OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_SIMPLE_RVT_TT_nldm_211120.lib.gz line 13343, timing group from output port.
+[WARNING STA-1212] /home/fetzfs_projects/MISC-ytliu/watermarking/OR0415/OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_SIMPLE_RVT_TT_nldm_211120.lib.gz line 13376, timing group from output port.
+[WARNING STA-1212] /home/fetzfs_projects/MISC-ytliu/watermarking/OR0415/OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_SIMPLE_RVT_TT_nldm_211120.lib.gz line 14772, timing group from output port.
+[WARNING STA-1212] /home/fetzfs_projects/MISC-ytliu/watermarking/OR0415/OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_SIMPLE_RVT_TT_nldm_211120.lib.gz line 14805, timing group from output port.
+[WARNING STA-1212] /home/fetzfs_projects/MISC-ytliu/watermarking/OR0415/OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_SIMPLE_RVT_TT_nldm_211120.lib.gz line 14838, timing group from output port.
+[WARNING EST-0018] wire capacitance for corner default is zero. Use the set_wire_rc command to set wire resistance and capacitance.
+[2026-04-27 23:59:43] [wm_embed +    3.16s] STA slack filter done in 2.87s: mode=sta kept=1387 dropped=13200
+[2026-04-27 23:59:43] [wm_embed +    3.16s] building macro/obstruction index and buckets
+[2026-04-27 23:59:43] [wm_embed +    3.21s] bucket build done in 0.05s: buckets=969 dense_tiles=0
+[2026-04-27 23:59:43] [wm_embed +    3.21s] enumerating local pair/triple candidates
+[2026-04-28 00:00:15] [wm_embed +   34.88s] candidate enumeration done in 31.68s: pair_candidates=162 triple_candidates=0
+[2026-04-28 00:00:15] [wm_embed +   34.88s] selecting non-overlapping keyed constraints
+[2026-04-28 00:00:15] [wm_embed +   34.89s] selection done in 0.00s: selected_pairs=66 selected_groups=0
+[2026-04-28 00:00:15] [wm_embed +   34.89s] applying pair swaps
+[2026-04-28 00:00:15] [wm_embed +   34.89s] pair apply done in 0.00s: changed=32
+[2026-04-28 00:00:15] [wm_embed +   34.89s] applying triple permutations
+[2026-04-28 00:00:15] [wm_embed +   34.89s] triple apply done in 0.00s: changed=0
+[2026-04-28 00:00:15] [wm_embed +   34.89s] running incremental detailedPlacement max_disp_x=925 sites max_disp_y=185 rows
+[INFO DPL-0006] Core area: 2194.44 um^2, Instances area: 1607.63 um^2, Utilization: 73.3%
+[INFO DPL-0005] Diamond search max displacement: +/- 925 sites horizontally, +/- 185 rows vertically.
+[INFO DPL-1101] Legalizing using diamond search.
+setInitialGridCells()
+Movements Summary
+---------------------------------------
+Total cells:                       0
+Diamond Move Success:              0 (  0.00%)
+Diamond Move Failure:              0
+Rip-up and replace Success:        0 (  0.00% of diamond failures)
+Rip-up and replace Failure:        0
+Total Placement Failures:          0
+---------------------------------------
+[2026-04-28 00:00:15] [wm_embed +   35.05s] incremental detailedPlacement done in 0.16s
+[2026-04-28 00:00:15] [wm_embed +   35.05s] pairs=66 groups=0 csv_pair_ok=66 csv_group_ok=0 changed_pairs=32 changed_groups=0 (pre-dpl embed counts pair_sat=66 group_sat=0)
+[2026-04-28 00:00:15] [wm_embed +   35.05s] Pc pairs (p=1/2)<=1.355e-20  groups (p=1/6)<=1.000e+00
+[2026-04-28 00:00:15] [wm_embed +   35.05s] writing ODB/DEF/CSV
+[2026-04-28 00:00:16] [wm_embed +   35.61s] cell list -> /home/fetzfs_projects/MISC-ytliu/watermarking/OR0415/OpenROAD-flow-scripts/flow/watermarking/place_ordering/../../results/asap7/aes/base/wm_place_order_embed_1um.csv
+[2026-04-28 00:00:16] [wm_embed +   35.61s] message tag: 'place-ordering-wm-aes'
+[2026-04-28 00:00:16] [wm_embed +   35.61s] write outputs done in 0.56s
+[2026-04-28 00:00:16] [wm_embed +   35.61s] done
+OpenROAD 7bc63749c8850e2937c58b0c3258a5df23db98ae 
+Features included (+) or not (-): +GPU +GUI +Python
+This program is licensed under the BSD-3 license. See the LICENSE file for details.
+Components of this program may be licensed under more restrictive licenses which must be honored.
+[WARNING ORD-0039] .openroad ignored with -python
+[2026-04-28 00:00:17] [wm_verify +    0.01s] start
+[2026-04-28 00:00:17] [wm_verify +    0.01s] input=/home/fetzfs_projects/MISC-ytliu/watermarking/OR0415/OpenROAD-flow-scripts/flow/watermarking/place_ordering/../../results/asap7/aes/base/3_place_order_wm_1um.odb
+[2026-04-28 00:00:17] [wm_verify +    0.01s] cell_list=/home/fetzfs_projects/MISC-ytliu/watermarking/OR0415/OpenROAD-flow-scripts/flow/watermarking/place_ordering/../../results/asap7/aes/base/wm_place_order_embed_1um.csv
+[2026-04-28 00:00:17] [wm_verify +    0.19s] read inputs done in 0.18s: csv_rows=66
+[2026-04-28 00:00:17] [wm_verify +    0.20s] verification scan done in 0.01s
+[2026-04-28 00:00:17] [wm_verify +    0.20s] pairs checked=66 ok=66  groups checked=0 ok=0
+[2026-04-28 00:00:17] [wm_verify +    0.20s] Pc pairs<=1.355e-20 groups<=1.000e+00
+[2026-04-28 00:00:17] [wm_verify +    0.23s] summary CSV -> /home/fetzfs_projects/MISC-ytliu/watermarking/OR0415/OpenROAD-flow-scripts/flow/watermarking/place_ordering/../../results/asap7/aes/base/wm_place_order_verify_1um.csv
+[2026-04-28 00:00:17] [wm_verify +    0.23s] done
+[2026-04-28 00:00:18] [run_place_wm] finished status=0 elapsed=40s

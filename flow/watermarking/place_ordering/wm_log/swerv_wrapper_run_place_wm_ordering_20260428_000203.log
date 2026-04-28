@@ -1,0 +1,28 @@
+[2026-04-28 00:02:03] [run_place_wm] logging to /home/fetzfs_projects/MISC-ytliu/watermarking/OR0415/OpenROAD-flow-scripts/flow/watermarking/place_ordering/wm_log/swerv_wrapper_run_place_wm_ordering_20260428_000203.log
+[2026-04-28 00:02:03] [run_place_wm] design : swerv_wrapper/asap7/base_tcp1455
+[2026-04-28 00:02:03] [run_place_wm] seed   : /home/fetzfs_projects/MISC-ytliu/watermarking/OR0415/OpenROAD-flow-scripts/flow/watermarking/gen_key/out/swerv_wrapper/seed_placement.hex
+[2026-04-28 00:02:03] [run_place_wm] input  : /home/fetzfs_projects/MISC-ytliu/watermarking/OR0415/OpenROAD-flow-scripts/flow/watermarking/place_ordering/../../results/asap7/swerv_wrapper/base_tcp1455/3_place.odb
+[2026-04-28 00:02:03] [run_place_wm] output : /home/fetzfs_projects/MISC-ytliu/watermarking/OR0415/OpenROAD-flow-scripts/flow/watermarking/place_ordering/../../results/asap7/swerv_wrapper/base_tcp1455/3_place_order_wm_1um.odb
+[2026-04-28 00:02:03] [run_place_wm] grid   : 8x8, pair_dist=1um, pairs/tile=4, groups/tile=2, use_groups=0
+[2026-04-28 00:02:03] [run_place_wm] timing : slack>=0.05ns, sdc=/home/fetzfs_projects/MISC-ytliu/watermarking/OR0415/OpenROAD-flow-scripts/flow/watermarking/place_ordering/../../results/asap7/swerv_wrapper/base_tcp1455/3_place.sdc
+[2026-04-28 00:02:03] [run_place_wm] starting embed + verify
+OpenROAD 7bc63749c8850e2937c58b0c3258a5df23db98ae 
+Features included (+) or not (-): +GPU +GUI +Python
+This program is licensed under the BSD-3 license. See the LICENSE file for details.
+Components of this program may be licensed under more restrictive licenses which must be honored.
+[WARNING ORD-0039] .openroad ignored with -python
+[2026-04-28 00:02:21] [wm_embed +    0.02s] start
+[2026-04-28 00:02:21] [wm_embed +    0.02s] input=/home/fetzfs_projects/MISC-ytliu/watermarking/OR0415/OpenROAD-flow-scripts/flow/watermarking/place_ordering/../../results/asap7/swerv_wrapper/base_tcp1455/3_place.odb
+[2026-04-28 00:02:21] [wm_embed +    0.02s] output_odb=/home/fetzfs_projects/MISC-ytliu/watermarking/OR0415/OpenROAD-flow-scripts/flow/watermarking/place_ordering/../../results/asap7/swerv_wrapper/base_tcp1455/3_place_order_wm_1um.odb
+[2026-04-28 00:02:21] [wm_embed +    0.02s] params grid=8x8 pair_dist=1.0um pairs_per_tile=4 groups_per_tile=2 use_groups=0 slack_threshold=0.05ns
+[2026-04-28 00:02:21] [wm_embed +    0.08s] reading input ODB
+[WARNING ORD-0012] Hierarchical flow (-hier) is currently in development and may cause multiple issues. Do not use in production environments.
+[2026-04-28 00:02:21] [wm_embed +    0.77s] read ODB done in 0.69s
+[2026-04-28 00:02:21] [wm_embed +    0.79s] collecting and pre-filtering movable core cells
+[2026-04-28 00:02:23] [wm_embed +    2.45s] pre-filter done in 1.66s: movable=110312 single_row=110312 pre_sta=95629
+[2026-04-28 00:02:23] [wm_embed +    2.45s] starting STA slack filter (read_liberty/read_sdc/estimate_parasitics/pin slack)
+[WARNING EST-0018] wire capacitance for corner default is zero. Use the set_wire_rc command to set wire resistance and capacitance.
+[2026-04-28 00:02:30] [wm_embed +    9.79s] STA slack filter done in 7.34s: mode=sta kept=95629 dropped=0
+[2026-04-28 00:02:30] [wm_embed +    9.79s] building macro/obstruction index and buckets
+[2026-04-28 00:02:46] [wm_embed +   25.10s] bucket build done in 15.30s: buckets=22532 dense_tiles=0
+[2026-04-28 00:02:46] [wm_embed +   25.10s] enumerating local pair/triple candidates
