@@ -42,55 +42,159 @@ def _collect_candidates_same_row(
     ny: int,
     pair_dist_dbu: int,
     eps_pair: int,
-    macro_index: wc.MacroIndex,
+    eps_group: int,
     dense_tiles: Set[Tuple[int, int]],
     include_groups: bool,
-) -> Tuple[List[dict], List[dict]]:
+    *,
+    hpwl_cache: Optional[wc.HPWLCache],
+    fanout_map: Dict[int, int],
+    fanout_diff_max: int,
+    neighbor_min_slack: Dict[int, float],
+    slack_floor_s: float,
+    pairs_per_tile: int,
+    tile_oversample: int,
+    pair_neighbor_k: int,
+) -> Tuple[List[dict], List[dict], Dict[str, int]]:
+    """Tile-local cheap-filter cascade with bounded enumeration and HPWL cache.
+
+    Returns ``(pair_rows, triple_rows, counters)``. The cascade order is:
+      bucket -> bounded-K window -> distance -> neighbor-slack -> fanout-diff
+      -> dense-tile gate (precomputed) -> swap-HPWL (cached, last & most expensive).
+    Per-tile early stop kicks in once ``pairs_per_tile * tile_oversample`` pair
+    candidates have been accepted in that tile.
+    """
     pair_rows: List[dict] = []
     triple_rows: List[dict] = []
+    counters = {
+        "raw_enumerated": 0,
+        "dist_rejects": 0,
+        "slack_rejects": 0,
+        "fanout_rejects": 0,
+        "hpwl_rejects": 0,
+        "accepted": 0,
+        "tiles_capped": 0,
+        "raw_triples": 0,
+        "triple_hpwl_rejects": 0,
+        "triple_accepted": 0,
+    }
 
-    for key, cells in buckets.items():
-        tile_xy = (key[0][0], key[0][1])
-        if tile_xy in dense_tiles:
-            continue
-        if len(cells) < 2:
-            continue
-        sorted_cells = wc.sort_instances_by_x(cells)
-        for a, b in wc.enumerate_close_pairs_sorted_row(sorted_cells, pair_dist_dbu):
-            if macro_index.near_blockage(a) or macro_index.near_blockage(b):
-                continue
-            dhp = wc.swap_delta_hpwl(a, b)
-            if abs(dhp) > eps_pair:
-                continue
-            tid = wc.tile_of(a, bbox, tw, th, nx, ny)
-            pair_rows.append({
-                "kind": "pair",
-                "tile_id": tid,
-                "a": a,
-                "b": b,
-                "dhp": dhp,
-            })
+    cap_per_tile = max(1, pairs_per_tile * max(1, tile_oversample))
 
-        if include_groups and len(sorted_cells) >= 3:
-            for a, b, c in wc.enumerate_close_triples_sorted_row(sorted_cells, pair_dist_dbu):
-                if macro_index.near_blockage(a) or macro_index.near_blockage(b):
+    # Group buckets by tile so we can enforce a per-tile budget.
+    by_tile: Dict[Tuple[int, int], List[wc.BucketKey]] = {}
+    for k in buckets.keys():
+        by_tile.setdefault((k[0][0], k[0][1]), []).append(k)
+
+    pos = hpwl_cache.pos if hpwl_cache is not None else None
+
+    def _x_of(inst) -> int:
+        if pos is not None:
+            try:
+                return pos[inst.getId()][0]
+            except Exception:
+                pass
+        return wc.inst_bottom_left(inst)[0]
+
+    def _swap_dhp(a, b) -> int:
+        if hpwl_cache is not None:
+            return hpwl_cache.swap_delta_hpwl(a, b)
+        return wc.swap_delta_hpwl(a, b)
+
+    capped_tiles: Set[Tuple[int, int]] = set()
+    for tid, bucket_keys in by_tile.items():
+        if tid in dense_tiles:
+            continue
+        accepted_pairs_here = 0
+        for bk in bucket_keys:
+            if accepted_pairs_here >= cap_per_tile:
+                if tid not in capped_tiles:
+                    counters["tiles_capped"] += 1
+                    capped_tiles.add(tid)
+                break
+            cells = buckets[bk]
+            if len(cells) < 2:
+                continue
+            # Sort by cached x.
+            sorted_cells = sorted(cells, key=_x_of)
+
+            for a, b in wc.enumerate_close_pairs_neighbor_k(
+                sorted_cells, pair_dist_dbu, pair_neighbor_k, pos=pos,
+            ):
+                counters["raw_enumerated"] += 1
+                ax = _x_of(a)
+                bx = _x_of(b)
+                if bx - ax > pair_dist_dbu:
+                    counters["dist_rejects"] += 1
                     continue
-                if macro_index.near_blockage(c):
+                # Neighbor-slack guard.
+                if neighbor_min_slack:
+                    try:
+                        aid = a.getId()
+                        bid = b.getId()
+                    except Exception:
+                        aid = bid = None
+                    ms_a = neighbor_min_slack.get(aid, slack_floor_s)
+                    ms_b = neighbor_min_slack.get(bid, slack_floor_s)
+                    if ms_a < slack_floor_s or ms_b < slack_floor_s:
+                        counters["slack_rejects"] += 1
+                        continue
+                # Fanout-diff cheap filter.
+                if fanout_diff_max >= 0 and fanout_map:
+                    try:
+                        fa = fanout_map.get(a.getId(), 0)
+                        fb = fanout_map.get(b.getId(), 0)
+                    except Exception:
+                        fa = fb = 0
+                    if abs(fa - fb) > fanout_diff_max:
+                        counters["fanout_rejects"] += 1
+                        continue
+                # HPWL gate (most expensive).
+                dhp = _swap_dhp(a, b)
+                if abs(dhp) > eps_pair:
+                    counters["hpwl_rejects"] += 1
                     continue
-                costs = wc.triple_all_perm_hpwl_costs(a, b, c)
-                spread = max(costs) - min(costs)
-                tid = wc.tile_of(a, bbox, tw, th, nx, ny)
-                triple_rows.append({
-                    "kind": "triple",
+                pair_rows.append({
+                    "kind": "pair",
                     "tile_id": tid,
                     "a": a,
                     "b": b,
-                    "c": c,
-                    "costs": costs,
-                    "spread": spread,
+                    "dhp": dhp,
+                    "eps_pair": eps_pair,
                 })
+                accepted_pairs_here += 1
+                counters["accepted"] += 1
+                if accepted_pairs_here >= cap_per_tile:
+                    if tid not in capped_tiles:
+                        counters["tiles_capped"] += 1
+                        capped_tiles.add(tid)
+                    break
 
-    return pair_rows, triple_rows
+            if include_groups and len(sorted_cells) >= 3:
+                # Triples are expensive to enumerate; stop early if we already
+                # have enough pair surplus.
+                if accepted_pairs_here >= cap_per_tile:
+                    continue
+                for a, b, c in wc.enumerate_close_triples_sorted_row(
+                    sorted_cells, pair_dist_dbu,
+                ):
+                    counters["raw_triples"] += 1
+                    costs = wc.triple_all_perm_hpwl_costs(a, b, c)
+                    spread = max(costs) - min(costs)
+                    if spread > eps_group:
+                        counters["triple_hpwl_rejects"] += 1
+                        continue
+                    triple_rows.append({
+                        "kind": "triple",
+                        "tile_id": tid,
+                        "a": a,
+                        "b": b,
+                        "c": c,
+                        "costs": costs,
+                        "spread": spread,
+                    })
+                    counters["triple_accepted"] += 1
+
+    return pair_rows, triple_rows, counters
 
 
 def _pair_key_fn(seed: bytes, tid: Tuple[int, int], r: dict) -> bytes:
@@ -103,6 +207,10 @@ def _group_key_fn(seed: bytes, tid: Tuple[int, int], r: dict) -> bytes:
     )
 
 
+def _pair_candidate_key(r: dict) -> str:
+    return wc.pair_id_str(r["a"].getName(), r["b"].getName())
+
+
 def _select_non_overlap(
     tile_id: Tuple[int, int],
     rows: Sequence[dict],
@@ -110,19 +218,35 @@ def _select_non_overlap(
     used: Set[str],
     key_fn: Callable[[Tuple[int, int], dict], bytes],
     spread_max: Optional[int] = None,
+    tile_touch_used: Optional[Dict[Tuple[int, int], int]] = None,
+    tile_touch_cap: Optional[int] = None,
 ) -> List[dict]:
+    """Greedy selection by PRF order.
+
+    ``tile_touch_used``/``tile_touch_cap`` (when provided) cap the number of
+    cells in this tile that can be perturbed (sum across pairs and triples).
+    """
     pool = [r for r in rows if r["tile_id"] == tile_id]
     if spread_max is not None:
         pool = [r for r in pool if r.get("spread", 0) <= spread_max]
     pool.sort(key=lambda r: key_fn(tile_id, r), reverse=True)
     picked: List[dict] = []
+    cur_touch = (tile_touch_used or {}).get(tile_id, 0)
     for r in pool:
         if r["kind"] == "pair":
             na, nb = r["a"].getName(), r["b"].getName()
             if na in used or nb in used:
                 continue
+            cells_added = 2
+            if (
+                tile_touch_cap is not None
+                and tile_touch_cap >= 0
+                and cur_touch + cells_added > tile_touch_cap
+            ):
+                continue
             used.add(na)
             used.add(nb)
+            cur_touch += cells_added
             picked.append(r)
         else:
             na = r["a"].getName()
@@ -130,12 +254,22 @@ def _select_non_overlap(
             nc = r["c"].getName()
             if na in used or nb in used or nc in used:
                 continue
+            cells_added = 3
+            if (
+                tile_touch_cap is not None
+                and tile_touch_cap >= 0
+                and cur_touch + cells_added > tile_touch_cap
+            ):
+                continue
             used.add(na)
             used.add(nb)
             used.add(nc)
+            cur_touch += cells_added
             picked.append(r)
         if len(picked) >= quota:
             break
+    if tile_touch_used is not None:
+        tile_touch_used[tile_id] = cur_touch
     return picked
 
 
@@ -206,11 +340,11 @@ def main() -> int:
     )
     p.add_argument(
         "--hpwl-eps-pair-dbu", type=int,
-        default=int(os.environ.get("WM_HPWL_EPS_PAIR_DBU", "500")),
+        default=int(os.environ.get("WM_HPWL_EPS_PAIR_DBU", "100")),
     )
     p.add_argument(
         "--hpwl-eps-group-dbu", type=int,
-        default=int(os.environ.get("WM_HPWL_EPS_GROUP_DBU", "500")),
+        default=int(os.environ.get("WM_HPWL_EPS_GROUP_DBU", "100")),
     )
     p.add_argument(
         "--fanout-max", type=int,
@@ -218,11 +352,15 @@ def main() -> int:
     )
     p.add_argument(
         "--slack-threshold-ns", type=float,
-        default=float(os.environ.get("WM_SLACK_THRESHOLD_NS", "0.05")),
+        default=float(os.environ.get("WM_SLACK_THRESHOLD_NS", "0.20")),
     )
     p.add_argument(
         "--crit-bin-ns", type=float,
         default=float(os.environ.get("WM_CRIT_BIN_NS", "0.05")),
+    )
+    p.add_argument(
+        "--crit-bin-relaxed-ns", type=float,
+        default=float(os.environ.get("WM_CRIT_BIN_RELAXED_NS", "0.20")),
     )
     p.add_argument(
         "--tile-density-max", type=float,
@@ -235,6 +373,62 @@ def main() -> int:
     p.add_argument(
         "--blockage-margin-sites", type=int,
         default=int(os.environ.get("WM_BLOCKAGE_MARGIN_SITES", "4")),
+    )
+    p.add_argument(
+        "--pair-neighbor-k", type=int,
+        default=int(os.environ.get("WM_PAIR_NEIGHBOR_K", "2")),
+    )
+    p.add_argument(
+        "--tile-oversample", type=int,
+        default=int(os.environ.get("WM_TILE_OVERSAMPLE", "4")),
+    )
+    p.add_argument(
+        "--fanout-diff-max", type=int,
+        default=int(os.environ.get("WM_FANOUT_DIFF_MAX", "4")),
+    )
+    p.add_argument(
+        "--hpwl-cache", type=int,
+        default=int(os.environ.get("WM_HPWL_CACHE", "1")),
+    )
+    p.add_argument(
+        "--hpwl-net-fanout-max", type=int,
+        default=int(os.environ.get("WM_HPWL_NET_FANOUT_MAX", "64")),
+    )
+    p.add_argument(
+        "--neighbor-slack-margin-ns", type=float,
+        default=float(os.environ.get("WM_NEIGHBOR_SLACK_MARGIN_NS", "0.10")),
+    )
+    p.add_argument(
+        "--tile-touch-frac-max", type=float,
+        default=float(os.environ.get("WM_TILE_TOUCH_FRAC_MAX", "0.05")),
+    )
+    p.add_argument(
+        "--tile-touch-floor-pairs", type=int,
+        default=int(os.environ.get("WM_TILE_TOUCH_FLOOR_PAIRS", "4")),
+    )
+    p.add_argument(
+        "--post-guard", type=int,
+        default=int(os.environ.get("WM_POST_GUARD", "1")),
+    )
+    p.add_argument(
+        "--post-guard-final-check", type=int,
+        default=int(os.environ.get("WM_POST_GUARD_FINAL_CHECK", "1")),
+    )
+    p.add_argument(
+        "--guard-degrade-ns", type=float,
+        default=float(os.environ.get("WM_GUARD_DEGRADE_NS", "0.02")),
+    )
+    p.add_argument(
+        "--min-pairs-total", type=int,
+        default=int(os.environ.get("WM_MIN_PAIRS_TOTAL", "64")),
+    )
+    p.add_argument(
+        "--pair-neighbor-k-relaxed", type=int,
+        default=int(os.environ.get("WM_PAIR_NEIGHBOR_K_RELAXED", "8")),
+    )
+    p.add_argument(
+        "--hpwl-eps-pair-relaxed-dbu", type=int,
+        default=int(os.environ.get("WM_HPWL_EPS_PAIR_RELAXED_DBU", "200")),
     )
     p.add_argument("--sdc", default=os.environ.get("WM_SDC", ""))
     p.add_argument("--max-disp-micron", type=float, nargs=2, metavar=("X", "Y"), default=None)
@@ -322,9 +516,11 @@ def main() -> int:
     macro_index = wc.MacroIndex(block, bbox, nx, ny, tw, th, margin_dbu)
 
     buckets: Dict[wc.BucketKey, List[object]] = {}
+    safe_kept: List[object] = []
     for inst in kept:
         if macro_index.near_blockage(inst):
             continue
+        safe_kept.append(inst)
         y = wc.inst_bottom_left(inst)[1]
         ry = wc.snap_row_y(y, row_bottoms)
         mw = wc.inst_size(inst)[0]
@@ -335,48 +531,220 @@ def main() -> int:
 
     density = wc.compute_tile_density(kept, bbox, nx, ny, tw, th)
     dense_tiles = {t for t, d in density.items() if d > args.tile_density_max}
+    # Per-tile total movable cell count for the touch-fraction cap. Using the
+    # total movable population (not just the STA-safe subset) ensures the cap
+    # represents perturbation as a fraction of the actual placement.
+    tile_total_count: Dict[Tuple[int, int], int] = {}
+    for inst in cells_all:
+        tid = wc.tile_of(inst, bbox, tw, th, nx, ny)
+        tile_total_count[tid] = tile_total_count.get(tid, 0) + 1
     _log(
         f"bucket build done in {time.time() - t_phase:.2f}s: "
-        f"buckets={len(buckets)} dense_tiles={len(dense_tiles)}"
+        f"buckets={len(buckets)} dense_tiles={len(dense_tiles)} "
+        f"safe_kept={len(safe_kept)}"
     )
 
+    # ---- HPWL cache + per-instance fanout / neighbor-slack maps ----
+    hpwl_cache: Optional[wc.HPWLCache] = None
+    fanout_map: Dict[int, int] = {}
+    neighbor_min_slack: Dict[int, float] = {}
+    id_to_name: Dict[int, str] = {}
+    name_to_inst: Dict[str, object] = {}
+    for inst in safe_kept:
+        try:
+            iid = inst.getId()
+            nm = inst.getName()
+        except Exception:
+            continue
+        id_to_name[iid] = nm
+        name_to_inst[nm] = inst
+        try:
+            fanout_map[iid] = wc.fanout_of(inst)
+        except Exception:
+            fanout_map[iid] = 0
+
+    if args.hpwl_cache:
+        t_phase = time.time()
+        _log(
+            f"building HPWL cache (net_fanout_max={args.hpwl_net_fanout_max})"
+        )
+        hpwl_cache = wc.HPWLCache(
+            safe_kept, net_fanout_max=args.hpwl_net_fanout_max,
+        )
+        _log(
+            f"HPWL cache done in {time.time() - t_phase:.2f}s: "
+            f"insts={len(hpwl_cache.pos)} nets={len(hpwl_cache.net_pins)} "
+            f"skipped_high_fanout_nets={len(hpwl_cache.skipped_nets)}"
+        )
+
+    slack_floor_s = args.slack_threshold_ns * 1e-9
+    if hpwl_cache is not None and slack_map:
+        t_phase = time.time()
+        margin_s = args.neighbor_slack_margin_ns * 1e-9
+        floor_with_margin = slack_floor_s + margin_s
+        neighbor_min_slack = hpwl_cache.neighbor_min_slack(
+            slack_map, id_to_name, default=floor_with_margin,
+        )
+        n_below = sum(1 for v in neighbor_min_slack.values() if v < floor_with_margin)
+        _log(
+            f"neighbor-slack map built in {time.time() - t_phase:.2f}s: "
+            f"insts={len(neighbor_min_slack)} below_margin={n_below} "
+            f"floor_with_margin={floor_with_margin*1e9:.3f}ns"
+        )
+
     t_phase = time.time()
-    _log("enumerating local pair/triple candidates")
-    pair_cands, triple_cands = _collect_candidates_same_row(
+    _log(
+        "enumerating local pair/triple candidates "
+        f"(neighbor_k={args.pair_neighbor_k} oversample={args.tile_oversample})"
+    )
+    pair_cands, triple_cands, enum_counters = _collect_candidates_same_row(
         buckets, bbox, tw, th, nx, ny,
-        pair_dist_dbu, args.hpwl_eps_pair_dbu, macro_index, dense_tiles,
+        pair_dist_dbu, args.hpwl_eps_pair_dbu, args.hpwl_eps_group_dbu,
+        dense_tiles,
         include_groups=bool(args.use_groups),
+        hpwl_cache=hpwl_cache,
+        fanout_map=fanout_map,
+        fanout_diff_max=args.fanout_diff_max,
+        neighbor_min_slack=neighbor_min_slack,
+        slack_floor_s=slack_floor_s + args.neighbor_slack_margin_ns * 1e-9,
+        pairs_per_tile=args.pairs_per_tile,
+        tile_oversample=args.tile_oversample,
+        pair_neighbor_k=args.pair_neighbor_k,
     )
     _log(
         f"candidate enumeration done in {time.time() - t_phase:.2f}s: "
         f"pair_candidates={len(pair_cands)} triple_candidates={len(triple_cands)}"
     )
+    _log(
+        "  cascade counters: "
+        f"raw_pairs={enum_counters['raw_enumerated']} "
+        f"dist_rej={enum_counters['dist_rejects']} "
+        f"slack_rej={enum_counters['slack_rejects']} "
+        f"fanout_rej={enum_counters['fanout_rejects']} "
+        f"hpwl_rej={enum_counters['hpwl_rejects']} "
+        f"accepted={enum_counters['accepted']} "
+        f"tiles_capped={enum_counters['tiles_capped']}"
+    )
+    if args.use_groups:
+        _log(
+            "  triples: "
+            f"raw={enum_counters['raw_triples']} "
+            f"hpwl_rej={enum_counters['triple_hpwl_rejects']} "
+            f"accepted={enum_counters['triple_accepted']}"
+        )
 
     pk = lambda tid, r: _pair_key_fn(seed, tid, r)
     gk = lambda tid, r: _group_key_fn(seed, tid, r)
 
-    t_phase = time.time()
-    _log("selecting non-overlapping keyed constraints")
     all_tiles_set = {(tx, ty) for tx in range(nx) for ty in range(ny)}
-    used_names: Set[str] = set()
-    selected_pairs: List[dict] = []
-    selected_groups: List[dict] = []
 
-    for tid in sorted(all_tiles_set):
-        selected_pairs.extend(
-            _select_non_overlap(tid, pair_cands, args.pairs_per_tile, used_names, pk)
-        )
-        if args.use_groups:
-            selected_groups.extend(
+    def _select_current_candidates() -> Tuple[List[dict], List[dict]]:
+        used_names: Set[str] = set()
+        tile_touch_used: Dict[Tuple[int, int], int] = {}
+        out_pairs: List[dict] = []
+        out_groups: List[dict] = []
+        floor_cells = max(2, 2 * max(0, args.tile_touch_floor_pairs))
+        for tid in sorted(all_tiles_set):
+            total_in_tile = tile_total_count.get(tid, 0)
+            touch_cap: Optional[int] = None
+            if args.tile_touch_frac_max > 0 and total_in_tile > 0:
+                touch_cap = max(
+                    floor_cells,
+                    int(args.tile_touch_frac_max * total_in_tile),
+                )
+            out_pairs.extend(
                 _select_non_overlap(
-                    tid,
-                    triple_cands,
-                    args.groups_per_tile,
-                    used_names,
-                    gk,
-                    spread_max=args.hpwl_eps_group_dbu,
+                    tid, pair_cands, args.pairs_per_tile, used_names, pk,
+                    tile_touch_used=tile_touch_used,
+                    tile_touch_cap=touch_cap,
                 )
             )
+            if args.use_groups:
+                out_groups.extend(
+                    _select_non_overlap(
+                        tid,
+                        triple_cands,
+                        args.groups_per_tile,
+                        used_names,
+                        gk,
+                        spread_max=args.hpwl_eps_group_dbu,
+                        tile_touch_used=tile_touch_used,
+                        tile_touch_cap=touch_cap,
+                    )
+                )
+        return out_pairs, out_groups
+
+    t_phase = time.time()
+    _log(
+        "selecting non-overlapping keyed constraints "
+        f"(tile_touch_frac_max={args.tile_touch_frac_max})"
+    )
+    selected_pairs, selected_groups = _select_current_candidates()
+
+    # Capacity fallback: the strict pass is deliberately conservative. If it
+    # yields too few bits, run a second pass with broader local neighborhoods,
+    # wider criticality bins, and a modestly relaxed HPWL threshold, then
+    # reselect from the merged candidate pool.
+    if args.min_pairs_total > 0 and len(selected_pairs) < args.min_pairs_total:
+        _log(
+            "capacity fallback: selected_pairs below target "
+            f"({len(selected_pairs)} < {args.min_pairs_total}); "
+            f"relaxing neighbor_k={args.pair_neighbor_k_relaxed}, "
+            f"crit_bin={args.crit_bin_relaxed_ns}ns, "
+            f"hpwl_eps={args.hpwl_eps_pair_relaxed_dbu}"
+        )
+        relaxed_buckets: Dict[wc.BucketKey, List[object]] = {}
+        for inst in safe_kept:
+            y = wc.inst_bottom_left(inst)[1]
+            ry = wc.snap_row_y(y, row_bottoms)
+            mw = wc.inst_size(inst)[0]
+            slack = slack_map.get(inst.getName(), args.slack_threshold_ns * 1e-9)
+            tid = wc.tile_of(inst, bbox, tw, th, nx, ny)
+            key = wc.make_bucket_key(tid, ry, mw, slack, args.crit_bin_relaxed_ns)
+            relaxed_buckets.setdefault(key, []).append(inst)
+
+        rt_phase = time.time()
+        relaxed_pairs, relaxed_triples, relaxed_counters = _collect_candidates_same_row(
+            relaxed_buckets, bbox, tw, th, nx, ny,
+            pair_dist_dbu, args.hpwl_eps_pair_relaxed_dbu, args.hpwl_eps_group_dbu,
+            dense_tiles,
+            include_groups=bool(args.use_groups),
+            hpwl_cache=hpwl_cache,
+            fanout_map=fanout_map,
+            fanout_diff_max=args.fanout_diff_max,
+            neighbor_min_slack=neighbor_min_slack,
+            slack_floor_s=slack_floor_s + args.neighbor_slack_margin_ns * 1e-9,
+            pairs_per_tile=args.pairs_per_tile,
+            tile_oversample=args.tile_oversample,
+            pair_neighbor_k=args.pair_neighbor_k_relaxed,
+        )
+        seen_pairs = {_pair_candidate_key(r) for r in pair_cands}
+        added_pairs = 0
+        for r in relaxed_pairs:
+            k = _pair_candidate_key(r)
+            if k in seen_pairs:
+                continue
+            seen_pairs.add(k)
+            pair_cands.append(r)
+            added_pairs += 1
+        if args.use_groups:
+            triple_cands.extend(relaxed_triples)
+        selected_pairs, selected_groups = _select_current_candidates()
+        _log(
+            f"capacity fallback done in {time.time() - rt_phase:.2f}s: "
+            f"relaxed_pair_candidates={len(relaxed_pairs)} "
+            f"added_pairs={added_pairs} selected_pairs={len(selected_pairs)}"
+        )
+        _log(
+            "  relaxed counters: "
+            f"raw_pairs={relaxed_counters['raw_enumerated']} "
+            f"slack_rej={relaxed_counters['slack_rejects']} "
+            f"fanout_rej={relaxed_counters['fanout_rejects']} "
+            f"hpwl_rej={relaxed_counters['hpwl_rejects']} "
+            f"accepted={relaxed_counters['accepted']} "
+            f"tiles_capped={relaxed_counters['tiles_capped']}"
+        )
+
     _log(
         f"selection done in {time.time() - t_phase:.2f}s: "
         f"selected_pairs={len(selected_pairs)} selected_groups={len(selected_groups)}"
@@ -397,6 +765,7 @@ def main() -> int:
 
     pair_sat = 0
     pair_changed = 0
+    applied_pairs: List[dict] = []  # for post-guard revert
     t_phase = time.time()
     _log("applying pair swaps")
     for r in selected_pairs:
@@ -420,7 +789,7 @@ def main() -> int:
             ])
             continue
 
-        if abs(r["dhp"]) > args.hpwl_eps_pair_dbu:
+        if abs(r["dhp"]) > int(r.get("eps_pair", args.hpwl_eps_pair_dbu)):
             csv_rows.append([
                 "pair", wc.pair_id_str(a.getName(), b.getName()),
                 tid[0], tid[1], row_y,
@@ -443,6 +812,11 @@ def main() -> int:
         a.setLocation(bx, ay)
         b.setLocation(ax, by)
         pair_changed += 1
+        if hpwl_cache is not None:
+            try:
+                hpwl_cache.update_pos_after_swap(a, b)
+            except Exception:
+                pass
         wm_order = "|".join(wc.order_names_left_to_right((a, b)))
         sat = _pair_bit_from_positions(a, b) == tgt
         if sat:
@@ -454,9 +828,17 @@ def main() -> int:
             tgt, "", orig_order, wm_order,
             r["dhp"], abs(ax - bx), sat, "" if sat else "wrong_bit_after_swap",
         ])
+        applied_pairs.append({
+            "a": a, "b": b,
+            "orig_ax": ax, "orig_ay": ay,
+            "orig_bx": bx, "orig_by": by,
+            "csv_idx": len(csv_rows) - 1,
+            "tgt": tgt, "orig_order": orig_order,
+        })
 
     group_sat = 0
     group_changed = 0
+    applied_triples: List[dict] = []
     _log(f"pair apply done in {time.time() - t_phase:.2f}s: changed={pair_changed}")
     t_phase = time.time()
     _log("applying triple permutations")
@@ -471,6 +853,11 @@ def main() -> int:
         names_t = tuple(i.getName() for i in insts_sorted)
         tgt_perm = wc.target_perm_index(seed, tid, names_t)
         orig_order = "|".join(wc.order_names_left_to_right((a, b, c)))
+        orig_pos = {
+            a.getName(): wc.inst_bottom_left(a),
+            b.getName(): wc.inst_bottom_left(b),
+            c.getName(): wc.inst_bottom_left(c),
+        }
 
         applied, _perm_idx, exp_tuple, reason, dhp_est = _triple_apply(
             seed, a, b, c, tid, balance, args.hpwl_eps_group_dbu,
@@ -506,16 +893,116 @@ def main() -> int:
             "", tgt_perm, orig_order, wm_order,
             dhp_est, 0, sat, "" if sat else "order_mismatch_after_apply",
         ])
+        applied_triples.append({
+            "a": a, "b": b, "c": c,
+            "orig_pos": orig_pos,
+            "csv_idx": len(csv_rows) - 1,
+            "tgt_perm": tgt_perm,
+            "orig_order": orig_order,
+        })
+
+    _log(f"triple apply done in {time.time() - t_phase:.2f}s: changed={group_changed}")
+
+    # ---------- Post-embed STA guard: revert worst-degrading swaps ----------
+    reverted_pairs = 0
+    reverted_triples = 0
+    if args.post_guard and (applied_pairs or applied_triples):
+        t_phase = time.time()
+        _log(
+            "post-guard: running single STA pass over swapped cells "
+            f"(degrade_threshold={args.guard_degrade_ns}ns)"
+        )
+        guard_insts: Dict[str, object] = {}
+        for rec in applied_pairs:
+            guard_insts[rec["a"].getName()] = rec["a"]
+            guard_insts[rec["b"].getName()] = rec["b"]
+        for rec in applied_triples:
+            for inst in (rec["a"], rec["b"], rec["c"]):
+                guard_insts[inst.getName()] = inst
+        post_slacks = wc.compute_worst_slacks(design, list(guard_insts.values()))
+        _log(
+            f"post-guard: STA done in {time.time() - t_phase:.2f}s "
+            f"insts_scored={len(post_slacks)}"
+        )
+
+        degrade_s = args.guard_degrade_ns * 1e-9
+        bad_floor = slack_floor_s - degrade_s
+
+        def _is_bad(name: str) -> bool:
+            pre = slack_map.get(name, slack_floor_s)
+            post = post_slacks.get(name, pre)
+            if post < bad_floor:
+                return True
+            if (post - pre) < -degrade_s:
+                return True
+            return False
+
+        # Pairs
+        for rec in applied_pairs:
+            a = rec["a"]
+            b = rec["b"]
+            if _is_bad(a.getName()) or _is_bad(b.getName()):
+                a.setLocation(rec["orig_ax"], rec["orig_ay"])
+                b.setLocation(rec["orig_bx"], rec["orig_by"])
+                if hpwl_cache is not None:
+                    try:
+                        hpwl_cache.update_pos_after_swap(a, b)
+                    except Exception:
+                        pass
+                row = csv_rows[rec["csv_idx"]]
+                row[-4] = 0  # zero out hpwl_delta_dbu after revert
+                row[-3] = 0  # disp_max_dbu
+                row[-2] = False
+                row[-1] = "reverted_post_guard"
+                row[11] = rec["orig_order"]  # wm_order column
+                reverted_pairs += 1
+
+        # Triples
+        for rec in applied_triples:
+            names = [rec["a"].getName(), rec["b"].getName(), rec["c"].getName()]
+            if any(_is_bad(n) for n in names):
+                for inst in (rec["a"], rec["b"], rec["c"]):
+                    nm = inst.getName()
+                    ox, oy = rec["orig_pos"][nm]
+                    inst.setLocation(ox, oy)
+                row = csv_rows[rec["csv_idx"]]
+                row[-4] = 0
+                row[-3] = 0
+                row[-2] = False
+                row[-1] = "reverted_post_guard"
+                row[11] = rec["orig_order"]
+                reverted_triples += 1
+
+        if args.post_guard_final_check and (reverted_pairs or reverted_triples):
+            t_phase = time.time()
+            _log(
+                "post-guard: optional final STA check "
+                f"(reverted_pairs={reverted_pairs} reverted_triples={reverted_triples})"
+            )
+            final_slacks = wc.compute_worst_slacks(design, list(guard_insts.values()))
+            n_below = sum(1 for v in final_slacks.values() if v < bad_floor)
+            _log(
+                f"post-guard: final STA done in {time.time() - t_phase:.2f}s "
+                f"insts_below_floor={n_below}"
+            )
+        else:
+            _log(
+                f"post-guard: reverted_pairs={reverted_pairs} "
+                f"reverted_triples={reverted_triples}"
+            )
+
+    # Free large caches before DPL.
+    hpwl_cache = None
+    neighbor_min_slack = {}
 
     dpl = design.getOpendp()
     if args.max_disp_micron is None:
-        mx = float(os.environ.get("WM_MAX_DISP_X", "50"))
-        my = float(os.environ.get("WM_MAX_DISP_Y", "50"))
+        mx = float(os.environ.get("WM_MAX_DISP_X", "5"))
+        my = float(os.environ.get("WM_MAX_DISP_Y", "5"))
     else:
         mx, my = float(args.max_disp_micron[0]), float(args.max_disp_micron[1])
     max_disp_x = max(1, int(design.micronToDBU(mx) / sw))
     max_disp_y = max(1, int(design.micronToDBU(my) / sh))
-    _log(f"triple apply done in {time.time() - t_phase:.2f}s: changed={group_changed}")
     t_phase = time.time()
     _log(
         f"running incremental detailedPlacement max_disp_x={max_disp_x} sites "

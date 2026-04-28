@@ -6,24 +6,26 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-LOG_DIR="${SCRIPT_DIR}/wm_log"
-mkdir -p "${LOG_DIR}"
-LOG_FILE="${LOG_DIR}/run_verify_stages_order_$(date +%Y%m%d_%H%M%S).log"
-exec > >(tee -a "${LOG_FILE}") 2>&1
-echo "[run_verify_stages] logging to ${LOG_FILE}"
-
 DESIGN="${DESIGN:-aes}"
 PLATFORM="${PLATFORM:-asap7}"
 WM_FLOW_VARIANT="${WM_FLOW_VARIANT:-base}"
 
-PPA_FLOW_VARIANT="${PPA_FLOW_VARIANT:-base-ppa-1um}"
-
+LOG_DIR="${SCRIPT_DIR}/wm_log"
+mkdir -p "${LOG_DIR}"
+LOG_FILE="${LOG_DIR}/${DESIGN}_verify_stages_order_$(date +%Y%m%d_%H%M%S).log"
+exec > >(tee -a "${LOG_FILE}") 2>&1
+echo "[run_verify_stages] logging to ${LOG_FILE}"
 EMBED_RES="${SCRIPT_DIR}/../../results/${PLATFORM}/${DESIGN}/${WM_FLOW_VARIANT}"
+
+# ------ customized flow/file variant (should match run_ppa.sh's FLOW_VARIANT) -------------
+PPA_FLOW_VARIANT="${PPA_FLOW_VARIANT:-base-ppa-v2}"
+export WM_CELL_LIST="${WM_CELL_LIST:-${EMBED_RES}/wm_place_order_embed_v2.csv}"
+# --------------------------------------------------
+
 PPA_RES="${SCRIPT_DIR}/results/${PLATFORM}/${DESIGN}/${PPA_FLOW_VARIANT}"
 PPA_REPORTS="${SCRIPT_DIR}/reports/${PLATFORM}/${DESIGN}/${PPA_FLOW_VARIANT}"
 PPA_LOGS="${SCRIPT_DIR}/logs/${PLATFORM}/${DESIGN}/${PPA_FLOW_VARIANT}"
 
-export WM_CELL_LIST="${WM_CELL_LIST:-${EMBED_RES}/wm_place_order_embed_1um.csv}"
 export WM_VERIFY_STAGES="${WM_VERIFY_STAGES:-post_cts:${PPA_RES}/4_cts.odb,post_grt:${PPA_RES}/5_1_grt.odb,post_drt:${PPA_RES}/5_route.odb,post_final:${PPA_RES}/6_final.odb}"
 
 export WM_STAGE_REPORT="${WM_STAGE_REPORT:-${EMBED_RES}/wm_place_order_stage_report.csv}"

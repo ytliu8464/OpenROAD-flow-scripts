@@ -419,6 +419,62 @@ def filter_by_slack(
     return kept, slack_by_name, info
 
 
+def compute_worst_slacks(
+    design,
+    insts: Sequence[object],
+    refresh_parasitics: bool = True,
+) -> Dict[str, float]:
+    """Re-estimate parasitics (optional) and return worst pin slack per inst.
+
+    Liberty / SDC must already be loaded in ``design`` (e.g. by an earlier
+    ``filter_by_slack`` call). Returns ``{inst_name: worst_slack_seconds}``.
+    Insts with no resolvable slack are reported as ``+inf``.
+    """
+    if refresh_parasitics:
+        try:
+            design.evalTclString("estimate_parasitics -placement")
+        except Exception:
+            pass
+    try:
+        from openroad import Timing  # type: ignore
+
+        timing = Timing(design)
+        rise = getattr(Timing, "Rise")
+        fall = getattr(Timing, "Fall")
+        tmax = getattr(Timing, "Max")
+    except Exception:
+        return {}
+    out: Dict[str, float] = {}
+    for inst in insts:
+        worst: Optional[float] = None
+        try:
+            iterms = list(inst.getITerms())
+        except Exception:
+            iterms = []
+        for it in iterms:
+            for edge in (rise, fall):
+                try:
+                    s = timing.getPinSlack(it, edge, tmax)
+                except Exception:
+                    continue
+                if s is None:
+                    continue
+                try:
+                    sf = float(s)
+                except (TypeError, ValueError):
+                    continue
+                if math.isnan(sf) or math.isinf(sf):
+                    continue
+                if worst is None or sf < worst:
+                    worst = sf
+        try:
+            nm = inst.getName()
+        except Exception:
+            continue
+        out[nm] = worst if worst is not None else float("inf")
+    return out
+
+
 def _heuristic_filter(design, cells: Sequence, info: Dict[str, str]) -> Tuple[List[object], Dict[str, str]]:
     info["mode"] = info.get("mode", "heuristic")
     kept: List[object] = []
@@ -604,6 +660,44 @@ def enumerate_close_pairs_sorted_row(
             yield (cells_sorted_x[i], cells_sorted_x[j])
 
 
+def enumerate_close_pairs_neighbor_k(
+    cells_sorted_x: Sequence[object],
+    max_dx_dbu: int,
+    k: int,
+    pos: Optional[Dict[int, Tuple[int, int]]] = None,
+) -> Iterator[Tuple[object, object]]:
+    """Bounded-K version: yield only (i, i+1), ..., (i, i+k) within max_dx_dbu.
+
+    With ``k=2`` (default), at most ``2*n`` pairs are enumerated per bucket
+    instead of the full O(n^2) window. Uses ``pos`` (inst_id -> (x, y)) as a
+    fast lookup if provided, otherwise falls back to ``inst_bottom_left``.
+    """
+    n = len(cells_sorted_x)
+    if k <= 0:
+        # Full window mode for experiments; identical to enumerate_close_pairs_sorted_row.
+        yield from enumerate_close_pairs_sorted_row(cells_sorted_x, max_dx_dbu)
+        return
+
+    if pos is not None:
+        def _xof(c):
+            try:
+                return pos[c.getId()][0]
+            except Exception:
+                return inst_bottom_left(c)[0]
+    else:
+        def _xof(c):
+            return inst_bottom_left(c)[0]
+
+    for i in range(n):
+        xi = _xof(cells_sorted_x[i])
+        upper = min(n, i + 1 + k)
+        for j in range(i + 1, upper):
+            xj = _xof(cells_sorted_x[j])
+            if xj - xi > max_dx_dbu:
+                break
+            yield (cells_sorted_x[i], cells_sorted_x[j])
+
+
 def enumerate_close_triples_sorted_row(
     cells_sorted_x: Sequence[object],
     max_dx_dbu: int,
@@ -767,6 +861,260 @@ def triple_perm_hpwl_delta(a, b, c, perm_idx: int) -> int:
 
 def triple_all_perm_hpwl_costs(a, b, c) -> List[int]:
     return [triple_perm_hpwl_delta(a, b, c, k) for k in range(6)]
+
+
+# ---------------------------------------------------------------------------
+# Deduped HPWL cache (avoid OpenDB walks during enumeration)
+# ---------------------------------------------------------------------------
+
+class HPWLCache:
+    """Per-phase deduplicated cache of cell positions and incident net pins.
+
+    Layout:
+      pos:       Dict[inst_id, (x, y)]                         # only kept cells
+      inst_nets: Dict[inst_id, List[net_id]]                   # only kept cells
+      net_pins:  Dict[net_id, List[(px, py, owner_inst_id_or_None)]]
+
+    Each net is stored exactly once. Pins on movable kept cells carry an
+    ``owner_inst_id`` so that hypothetical moves can be applied without OpenDB
+    calls. Pins on non-kept cells (e.g. fixed/clock cells we don't watermark)
+    store ``None`` and are treated as static. Nets with more than
+    ``net_fanout_max`` ITerms are skipped entirely; they are usually
+    global/control nets, expensive to score, and not informative for local
+    swap quality.
+
+    Memory budget for typical asap7 designs: ~25 MB on jpeg, ~70-150 MB on
+    swerv_wrapper. The cache is freed before final DPL.
+    """
+
+    def __init__(
+        self,
+        kept_cells: Sequence[object],
+        net_fanout_max: int = 64,
+    ) -> None:
+        self.net_fanout_max = max(2, int(net_fanout_max))
+        self.pos: Dict[int, Tuple[int, int]] = {}
+        self.inst_nets: Dict[int, List[int]] = {}
+        self.net_pins: Dict[int, List[Tuple[int, int, Optional[int]]]] = {}
+        self.skipped_nets: Set[int] = set()
+
+        kept_ids: Set[int] = set()
+        for inst in kept_cells:
+            try:
+                iid = inst.getId()
+            except Exception:
+                continue
+            try:
+                bb = inst.getBBox()
+                self.pos[iid] = (bb.xMin(), bb.yMin())
+            except Exception:
+                continue
+            kept_ids.add(iid)
+            self.inst_nets[iid] = []
+
+        # Walk kept cells to collect their incident nets.
+        seen_nets: Set[int] = set()
+        for inst in kept_cells:
+            try:
+                iid = inst.getId()
+            except Exception:
+                continue
+            if iid not in self.inst_nets:
+                continue
+            try:
+                iterms = list(inst.getITerms())
+            except Exception:
+                iterms = []
+            for it in iterms:
+                try:
+                    net = it.getNet()
+                except Exception:
+                    net = None
+                if net is None:
+                    continue
+                try:
+                    nid = net.getId()
+                except Exception:
+                    continue
+                if nid in self.skipped_nets:
+                    continue
+                if nid in seen_nets:
+                    if nid not in self.inst_nets[iid]:
+                        self.inst_nets[iid].append(nid)
+                    continue
+                seen_nets.add(nid)
+                # Cache pins for this net once.
+                try:
+                    pin_iterms = list(net.getITerms())
+                except Exception:
+                    pin_iterms = []
+                if len(pin_iterms) > self.net_fanout_max:
+                    self.skipped_nets.add(nid)
+                    continue
+                pins: List[Tuple[int, int, Optional[int]]] = []
+                ok = True
+                for pit in pin_iterms:
+                    pinst = pit.getInst()
+                    try:
+                        bb = pit.getBBox()
+                        cx = (bb.xMin() + bb.xMax()) // 2
+                        cy = (bb.yMin() + bb.yMax()) // 2
+                    except Exception:
+                        ok = False
+                        break
+                    pid = None
+                    if pinst is not None:
+                        try:
+                            opid = pinst.getId()
+                            if opid in kept_ids:
+                                pid = opid
+                        except Exception:
+                            pid = None
+                    pins.append((cx, cy, pid))
+                if not ok or len(pins) < 2:
+                    self.skipped_nets.add(nid)
+                    continue
+                self.net_pins[nid] = pins
+                if nid not in self.inst_nets[iid]:
+                    self.inst_nets[iid].append(nid)
+
+    @staticmethod
+    def _hpwl(pins: Sequence[Tuple[int, int]]) -> int:
+        if len(pins) < 2:
+            return 0
+        xmin = pins[0][0]
+        xmax = xmin
+        ymin = pins[0][1]
+        ymax = ymin
+        for px, py in pins[1:]:
+            if px < xmin:
+                xmin = px
+            elif px > xmax:
+                xmax = px
+            if py < ymin:
+                ymin = py
+            elif py > ymax:
+                ymax = py
+        return (xmax - xmin) + (ymax - ymin)
+
+    def _hpwl_with_overrides(
+        self,
+        nid: int,
+        overrides: Dict[int, Tuple[int, int]],
+    ) -> int:
+        pts: List[Tuple[int, int]] = []
+        for px, py, oid in self.net_pins[nid]:
+            if oid is not None and oid in overrides:
+                base = self.pos.get(oid)
+                if base is None:
+                    pts.append((px, py))
+                    continue
+                nx, ny = overrides[oid]
+                ox, oy = base
+                pts.append((px + (nx - ox), py + (ny - oy)))
+            else:
+                pts.append((px, py))
+        return HPWLCache._hpwl(pts)
+
+    def swap_delta_hpwl(self, a, b) -> int:
+        """HPWL delta if instances a and b swap their (x, y) coordinates."""
+        try:
+            aid = a.getId()
+            bid = b.getId()
+        except Exception:
+            return swap_delta_hpwl(a, b)
+        ap = self.pos.get(aid)
+        bp = self.pos.get(bid)
+        if ap is None or bp is None:
+            return swap_delta_hpwl(a, b)
+        nets_a = self.inst_nets.get(aid, [])
+        nets_b = self.inst_nets.get(bid, [])
+        union: List[int] = list(nets_a)
+        seen = set(nets_a)
+        for n in nets_b:
+            if n not in seen:
+                seen.add(n)
+                union.append(n)
+        if not union:
+            return 0
+        overrides_after = {aid: bp, bid: ap}
+        delta = 0
+        for nid in union:
+            pins = self.net_pins.get(nid)
+            if pins is None:
+                continue
+            hb = HPWLCache._hpwl([(px, py) for px, py, _ in pins])
+            ha = self._hpwl_with_overrides(nid, overrides_after)
+            delta += ha - hb
+        return delta
+
+    def update_pos_after_swap(self, a, b) -> None:
+        """Keep cache consistent after an actually applied swap."""
+        try:
+            aid = a.getId()
+            bid = b.getId()
+        except Exception:
+            return
+        ap = self.pos.get(aid)
+        bp = self.pos.get(bid)
+        if ap is None or bp is None:
+            return
+        # Update pin positions on every shared net.
+        nets_a = set(self.inst_nets.get(aid, []))
+        nets_b = set(self.inst_nets.get(bid, []))
+        for nid in nets_a | nets_b:
+            pins = self.net_pins.get(nid)
+            if pins is None:
+                continue
+            new_pins: List[Tuple[int, int, Optional[int]]] = []
+            for px, py, oid in pins:
+                if oid == aid:
+                    new_pins.append((px + (bp[0] - ap[0]), py + (bp[1] - ap[1]), oid))
+                elif oid == bid:
+                    new_pins.append((px + (ap[0] - bp[0]), py + (ap[1] - bp[1]), oid))
+                else:
+                    new_pins.append((px, py, oid))
+            self.net_pins[nid] = new_pins
+        self.pos[aid] = bp
+        self.pos[bid] = ap
+
+    def neighbor_min_slack(
+        self,
+        slack_map: Dict[str, float],
+        id_to_name: Dict[int, str],
+        default: float,
+    ) -> Dict[int, float]:
+        """For every cached inst, the min slack of any *net-mate* cell (excluding self).
+
+        The instance's own slack is already filtered upstream by the slack
+        threshold; this map protects against timing-critical *neighbors*. If
+        a cell has no eligible neighbors (all nets dropped, all neighbors
+        non-kept), it gets ``default`` (treated as "no constraint").
+
+        Cells that pin into a net we skipped (high-fanout) are NOT considered,
+        which is conservative for our purpose: we only protect cells whose
+        signal-net neighbors are timing-critical.
+        """
+        out: Dict[int, float] = {}
+        for iid, nets in self.inst_nets.items():
+            best: Optional[float] = None
+            for nid in nets:
+                pins = self.net_pins.get(nid)
+                if pins is None:
+                    continue
+                for _px, _py, oid in pins:
+                    if oid is None or oid == iid:
+                        continue
+                    nm = id_to_name.get(oid)
+                    if nm is None:
+                        continue
+                    s = slack_map.get(nm)
+                    if s is None:
+                        continue
+                    if best is None or s < best:
+                        best = s
+            out[iid] = default if best is None else best
+        return out
 
 
 # ---------------------------------------------------------------------------

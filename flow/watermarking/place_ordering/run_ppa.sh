@@ -14,8 +14,10 @@ export PLATFORM="${PLATFORM:-asap7}"
 export WM_FLOW_VARIANT="${WM_FLOW_VARIANT:-base_tcp540}"
 
 # --------------------- flow variant ---------------------
-export FLOW_VARIANT="${FLOW_VARIANT:-base-tcp540-ppa-1um}"
-export DP_ODB="${FLOW_HOME}/results/${PLATFORM}/${DESIGN}/${WM_FLOW_VARIANT}/3_place_order_wm_1um.odb"
+# Output PPA logs/results live under flow_variant; defaults pair with
+# run_place_wm.sh's wm_1um output suffix.
+export FLOW_VARIANT="${FLOW_VARIANT:-base-tcp540-ppa-v2}"
+export DP_ODB="${DP_ODB:-${FLOW_HOME}/results/${PLATFORM}/${DESIGN}/${WM_FLOW_VARIANT}/3_place_order_wm_v2.odb}"
 # ------------------------------------------------------------
 
 SIF="${SINGULARITY_SIF:-/home/tool/singularity/images/ispd26.sif}"
