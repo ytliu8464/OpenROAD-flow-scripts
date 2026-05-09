@@ -1,6 +1,6 @@
 #!/bin/bash
 # SPDX-License-Identifier: BSD-3-Clause
-# Post-watermark CTS+GRT+DRT PPA, starting from the row-parity watermarked ODB.
+# Post-watermark CTS+GRT+DRT PPA, starting from the site-parity watermarked ODB.
 
 set -euo pipefail
 
@@ -12,7 +12,11 @@ export FLOW_HOME="${PROJ_DIR}/OR0415/OpenROAD-flow-scripts/flow"
 export DESIGN="${DESIGN:-jpeg}"
 export PLATFORM="${PLATFORM:-asap7}"
 export WM_FLOW_VARIANT="${WM_FLOW_VARIANT:-base_tcp540}"
+
+# --------------------- customized flow/file variant ---------------------
 export FLOW_VARIANT="${FLOW_VARIANT:-base-tcp540-ppa}"
+export DP_ODB="${FLOW_HOME}/results/${PLATFORM}/${DESIGN}/${WM_FLOW_VARIANT}/3_place_siteparity_wm.odb"
+# ---------------------  ---------------------
 
 # Automatically re-exec inside Singularity when run from the host.
 # SINGULARITY_NAME is set by the runtime whenever we are already inside a container.
@@ -32,10 +36,8 @@ if [[ -z "${SINGULARITY_NAME:-}" ]]; then
 fi
 
 export INPUTS_DIR="${FLOW_HOME}/OR_inputs/place_wm/${PLATFORM}/${DESIGN}"
-export DP_ODB="${FLOW_HOME}/results/${PLATFORM}/${DESIGN}/${WM_FLOW_VARIANT}/3_place_rowparity_wm.odb"
 export SKIP_DP_WM="1"
 
 make -f "${FLOW_HOME}/Makefile" \
      DESIGN_CONFIG="${FLOW_HOME}/designs/${PLATFORM}/${DESIGN}/config.mk" \
      wm_cts_and_route
-

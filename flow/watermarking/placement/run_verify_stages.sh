@@ -9,13 +9,13 @@ OPENROAD_EXE="${OPENROAD_EXE:-/home/fetzfs_projects/MISC-ytliu/watermarking/OR04
 SIF="${SINGULARITY_SIF:-/home/tool/singularity/images/ispd26.sif}"
 
 # Default: AES watermarking-test1 + PPA results from this repo layout
-export AES_RES="${AES_RES:-../../results/nangate45/aes/watermarking-test1}"
-PPA_RES="${PPA_RES:-${SCRIPT_DIR}/results/nangate45/aes/watermarking-test1-ppa}"
+export AES_RES="${AES_RES:-../../results/asap7/jpeg/base_tcp540}"
+PPA_RES="${PPA_RES:-${SCRIPT_DIR}/results/asap7/jpeg/base-tcp540-ppa}"
 
-export WM_CELL_LIST="${WM_CELL_LIST:-${AES_RES}/wm_cells_embed.csv}"
-export WM_VERIFY_STAGES="${WM_VERIFY_STAGES:-post_cts:${PPA_RES}/4_cts.odb,post_grt:${PPA_RES}/5_1_grt.odb,post_drt:${PPA_RES}/5_route.odb,post_fill:${PPA_RES}/6_final.odb}"
-export WM_STAGE_REPORT="${WM_STAGE_REPORT:-${PPA_RES}/wm_stage_report.csv}"
-export WM_DBU_PER_MICRON="${WM_DBU_PER_MICRON:-2000}"
+export WM_CELL_LIST="${WM_CELL_LIST:-${AES_RES}/rowparity_wm_cells_embed.csv}"
+export WM_VERIFY_STAGES="${WM_VERIFY_STAGES:-post_cts:${PPA_RES}/4_cts.odb,post_grt:${PPA_RES}/5_1_grt.odb,post_drt:${PPA_RES}/5_route.odb,post_final:${PPA_RES}/6_final.odb}"
+export WM_STAGE_REPORT="${WM_STAGE_REPORT:-${AES_RES}/wm_place_wm_stage_report.csv}"
+export WM_DBU_PER_MICRON="${WM_DBU_PER_MICRON:-1000}"
 
 singularity exec -B /home -B /tmp --bind /tmp/.X11-unix -e "$SIF" \
   env \

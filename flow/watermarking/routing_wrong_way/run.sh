@@ -21,9 +21,9 @@ export POST_DETAIL_ROUTE_TCL="${WM_DIR}/post_route_watermark.tcl"
 export INPUTS_DIR="${FLOW_HOME}/OR_inputs/route_wm/${PLATFORM}/${DESIGN}"
 export CTS_ODB="${FLOW_HOME}/results/${PLATFORM}/${DESIGN}/${WM_FLOW_VARIANT}/4_cts.odb"
 export SKIP_RT_WM="1"
-# export SKIP_RT_WM_WW="1"
 
 make -f ${FLOW_HOME}/Makefile \
      DESIGN_CONFIG="${FLOW_HOME}/designs/${PLATFORM}/${DESIGN}/config.mk" \
      OPENROAD_EXE="${PROJ_DIR}/OR0415/OpenROAD/build/bin/openroad" \
      wm_route_wrong_way
+
