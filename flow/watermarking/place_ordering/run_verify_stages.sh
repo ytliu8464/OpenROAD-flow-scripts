@@ -6,9 +6,9 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-DESIGN="${DESIGN:-aes}"
+DESIGN="${DESIGN:-jpeg}"
 PLATFORM="${PLATFORM:-asap7}"
-WM_FLOW_VARIANT="${WM_FLOW_VARIANT:-base}"
+WM_FLOW_VARIANT="${WM_FLOW_VARIANT:-base_tcp540}"
 
 LOG_DIR="${SCRIPT_DIR}/wm_log"
 mkdir -p "${LOG_DIR}"
@@ -18,7 +18,7 @@ echo "[run_verify_stages] logging to ${LOG_FILE}"
 EMBED_RES="${SCRIPT_DIR}/../../results/${PLATFORM}/${DESIGN}/${WM_FLOW_VARIANT}"
 
 # ------ customized flow/file variant (should match run_ppa.sh's FLOW_VARIANT) -------------
-PPA_FLOW_VARIANT="${PPA_FLOW_VARIANT:-base-ppa-v2}"
+PPA_FLOW_VARIANT="${PPA_FLOW_VARIANT:-base-tcp540-ppa-v2}"
 export WM_CELL_LIST="${WM_CELL_LIST:-${EMBED_RES}/wm_place_order_embed_v2.csv}"
 # --------------------------------------------------
 

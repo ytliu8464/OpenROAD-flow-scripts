@@ -9,14 +9,14 @@ export OPENROAD_EXE="${OPENROAD_EXE:-${PROJ_DIR}/OR0415/OpenROAD/build/bin/openr
 export KEPLER_FORMAL_EXE="${KEPLER_FORMAL_EXE:-${PROJ_DIR}/OR0415/kepler-formal/build/src/bin/kepler-formal}"
 export FLOW_HOME="${FLOW_HOME:-${PROJ_DIR}/OR0415/OpenROAD-flow-scripts/flow}"
 
-export DESIGN="${DESIGN:-jpeg}"
+export DESIGN="${DESIGN:-swerv_wrapper}"
 export PLATFORM="${PLATFORM:-asap7}"
-export WM_FLOW_VARIANT="${WM_FLOW_VARIANT:-base_tcp540}"
+export WM_FLOW_VARIANT="${WM_FLOW_VARIANT:-base_tcp1455}"
 
 # --------------------- flow variant ---------------------
 # Output PPA logs/results live under flow_variant; defaults pair with
 # run_place_wm.sh's wm_1um output suffix.
-export FLOW_VARIANT="${FLOW_VARIANT:-base-tcp540-ppa-v2}"
+export FLOW_VARIANT="${FLOW_VARIANT:-base-tcp1455-ppa-v2}"
 export DP_ODB="${DP_ODB:-${FLOW_HOME}/results/${PLATFORM}/${DESIGN}/${WM_FLOW_VARIANT}/3_place_order_wm_v2.odb}"
 # ------------------------------------------------------------
 
