@@ -42,3 +42,4 @@ export SKIP_RT_WM="1"
 make -f "${FLOW_HOME}/Makefile" \
      DESIGN_CONFIG="${FLOW_HOME}/designs/${PLATFORM}/${DESIGN}/config.mk" \
      wm_cts
+
