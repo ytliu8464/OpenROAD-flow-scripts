@@ -1,0 +1,15 @@
+{
+  "M": {
+    "owner_id": "alice",
+    "design_id": "aes",
+    "date": "2026-04-24",
+    "tool": {
+      "name": "OpenROAD",
+      "commit": "9b754920a0fc74783fe0c514118a2a6aad8cf216"
+    },
+    "nonce": "56c30cb3379617c738ad30746a41afec"
+  },
+  "sig_b64": "qZgXV2FzcB0D4ROoKeV7DDnM5EOlhQ9iM0XPTWEcrd5mnSxgTqtzFX/dvJ3G7lXtwuDPsV/SECxgsE+JXQg7BQ==",
+  "pk_fingerprint_sha256": "0299e4d97422a040edacd43f0c78dae2550308663705f8587a40d2f4eba8c80c",
+  "master_seed_hex": "d6665a891ae8459b3bbae2a8af4bf404ff2e8c31c680fcd2cac5a68a63dc4700"
+}
