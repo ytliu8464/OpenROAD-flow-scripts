@@ -1,0 +1,10 @@
+{
+  "stage": "routing",
+  "platform": "asap7",
+  "design": "swerv_wrapper",
+  "variant": "base_tcp1455",
+  "eligible": "",
+  "selected": "",
+  "detail_a": "",
+  "detail_b": ""
+}

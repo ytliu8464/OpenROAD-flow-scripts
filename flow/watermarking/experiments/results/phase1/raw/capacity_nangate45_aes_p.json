@@ -1,0 +1,11 @@
+{
+  "stage": "placement",
+  "platform": "nangate45",
+  "design": "aes",
+  "variant": "watermarking-test1",
+  "eligible": 0,
+  "selected": 0,
+  "detail_a": 0,
+  "detail_b": 0,
+  "source_log": "/home/fetzfs_projects/MISC-ytliu/watermarking/OR0415/OpenROAD-flow-scripts/flow/watermarking/place_ordering/wm_log/aes_run_place_wm_ordering_20260510_150200.log"
+}

@@ -1,0 +1,18 @@
+{
+  "platform": "nangate45",
+  "design": "jpeg",
+  "method": "Buffer-insertion",
+  "variant": "baseline-bufins",
+  "dWNS": "",
+  "dTNS": "",
+  "dRWL": "",
+  "dPower": "",
+  "dRuntime": "",
+  "Pc": "",
+  "X_P": "",
+  "x_P": "",
+  "X_C": "",
+  "x_C": "",
+  "p_R": "",
+  "note": "not yet run; bash baselines/buffer_insertion/run.sh"
+}

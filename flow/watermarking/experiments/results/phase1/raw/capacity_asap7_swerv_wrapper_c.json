@@ -1,0 +1,12 @@
+{
+  "stage": "cts",
+  "platform": "asap7",
+  "design": "swerv_wrapper",
+  "variant": "base_tcp1455",
+  "eligible": 18690,
+  "selected": 32,
+  "detail_a": 29,
+  "detail_b": 3,
+  "source_log": "/home/fetzfs_projects/MISC-ytliu/watermarking/OR0415/OpenROAD-flow-scripts/flow/watermarking/cts_v2/wm_log/swerv_wrapper_run_cts_wm_20260427_183028.log",
+  "source_csv": "/home/fetzfs_projects/MISC-ytliu/watermarking/OR0415/OpenROAD-flow-scripts/flow/results/asap7/swerv_wrapper/base_tcp1455/wm_cts_pairs_embed.csv"
+}

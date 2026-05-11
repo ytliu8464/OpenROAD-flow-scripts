@@ -1,0 +1,12 @@
+{
+  "stage": "cts",
+  "platform": "nangate45",
+  "design": "jpeg",
+  "variant": "watermarking-test1",
+  "eligible": "",
+  "selected": "",
+  "detail_a": "",
+  "detail_b": "",
+  "source_log": "",
+  "source_csv": ""
+}

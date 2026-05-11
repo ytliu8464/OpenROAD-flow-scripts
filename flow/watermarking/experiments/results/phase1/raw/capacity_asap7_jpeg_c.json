@@ -1,0 +1,12 @@
+{
+  "stage": "cts",
+  "platform": "asap7",
+  "design": "jpeg",
+  "variant": "base_tcp540",
+  "eligible": 8538,
+  "selected": 32,
+  "detail_a": 32,
+  "detail_b": 0,
+  "source_log": "/home/fetzfs_projects/MISC-ytliu/watermarking/OR0415/OpenROAD-flow-scripts/flow/watermarking/cts_v2/wm_log/jpeg_run_cts_wm_20260427_182801.log",
+  "source_csv": "/home/fetzfs_projects/MISC-ytliu/watermarking/OR0415/OpenROAD-flow-scripts/flow/results/asap7/jpeg/base_tcp540/wm_cts_pairs_embed.csv"
+}

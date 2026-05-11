@@ -1,0 +1,10 @@
+{
+  "stage": "routing",
+  "platform": "nangate45",
+  "design": "ariane136",
+  "variant": "base_tcp3p5",
+  "eligible": "",
+  "selected": "",
+  "detail_a": "",
+  "detail_b": ""
+}

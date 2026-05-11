@@ -1,0 +1,18 @@
+{
+  "platform": "nangate45",
+  "design": "swerv_wrapper",
+  "method": "All-stage",
+  "variant": "",
+  "dWNS": "",
+  "dTNS": "",
+  "dRWL": "",
+  "dPower": "",
+  "dRuntime": "",
+  "Pc": "",
+  "X_P": "",
+  "x_P": "",
+  "X_C": "",
+  "x_C": "",
+  "p_R": "",
+  "note": "no all-stage run found; run experiments/drivers/run_all_stage.sh"
+}

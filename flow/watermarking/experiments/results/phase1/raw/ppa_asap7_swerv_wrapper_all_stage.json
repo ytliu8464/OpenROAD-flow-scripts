@@ -1,0 +1,17 @@
+{
+  "platform": "asap7",
+  "design": "swerv_wrapper",
+  "method": "All-stage",
+  "variant": "place_ordering:base-tcp1455-ppa-v2; cts_v2:base-tcp1455-ppa-run2",
+  "dWNS": 0.05469295802390107,
+  "dTNS": 0.2544092978672418,
+  "dRWL": 0.00026738203863361604,
+  "dPower": -0.0001672607797975332,
+  "dRuntime": -0.7457435144804451,
+  "Pc": 1.925929944387236e-34,
+  "X_P": 80,
+  "x_P": 0,
+  "X_C": 32,
+  "x_C": 0,
+  "p_R": ""
+}

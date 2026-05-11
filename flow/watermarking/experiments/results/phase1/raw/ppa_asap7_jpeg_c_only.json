@@ -1,0 +1,17 @@
+{
+  "platform": "asap7",
+  "design": "jpeg",
+  "method": "C-only",
+  "variant": "base-tcp540-ppa-run2",
+  "dWNS": 0.0,
+  "dTNS": 0.0,
+  "dRWL": 0.0,
+  "dPower": 0.0,
+  "dRuntime": 0.005214732691373677,
+  "Pc": 2.3283064365386963e-10,
+  "X_P": "",
+  "x_P": "",
+  "X_C": 32,
+  "x_C": 0,
+  "p_R": ""
+}

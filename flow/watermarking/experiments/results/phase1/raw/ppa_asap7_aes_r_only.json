@@ -1,0 +1,18 @@
+{
+  "platform": "asap7",
+  "design": "aes",
+  "method": "R-only",
+  "variant": "",
+  "dWNS": "",
+  "dTNS": "",
+  "dRWL": "",
+  "dPower": "",
+  "dRuntime": "",
+  "Pc": "",
+  "X_P": "",
+  "x_P": "",
+  "X_C": "",
+  "x_C": "",
+  "p_R": "",
+  "note": "not yet run; use experiments/drivers/run_r_only.sh"
+}

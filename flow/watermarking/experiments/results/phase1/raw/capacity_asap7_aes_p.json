@@ -1,0 +1,11 @@
+{
+  "stage": "placement",
+  "platform": "asap7",
+  "design": "aes",
+  "variant": "base",
+  "eligible": 80,
+  "selected": 45,
+  "detail_a": 45,
+  "detail_b": 0,
+  "source_log": "/home/fetzfs_projects/MISC-ytliu/watermarking/OR0415/OpenROAD-flow-scripts/flow/watermarking/place_ordering/wm_log/aes_run_place_wm_ordering_20260428_114318.log"
+}

@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+# SPDX-License-Identifier: BSD-3-Clause
+# Tiny shim: run a python script in whatever environment has sklearn /
+# matplotlib / numpy.  Order of preference:
+#   1. If sklearn is importable by /usr/bin/python3.11, use that.
+#   2. Otherwise, hop into the singularity image (which we provisioned with
+#      scikit-learn 1.8 in the .local user site).
+set -euo pipefail
+if python3.11 -c "import sklearn" 2>/dev/null; then
+  exec python3.11 "$@"
+fi
+SIF="${SINGULARITY_SIF:-/home/tool/singularity/images/ispd26.sif}"
+exec singularity exec -B /home "${SIF}" python3 "$@"
