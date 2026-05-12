@@ -64,10 +64,10 @@ fi
 export WM_SEED_HEX="${SEED_PLACEMENT}"
 export WM_INPUT="${AES_RES}/3_place.odb"
 # --------------------- output names ---------------------
-export WM_OUTPUT_ODB="${AES_RES}/3_place_order_wm_v2.odb"
-export WM_OUTPUT_DEF="${AES_RES}/3_place_order_wm_v2.def"
-export WM_OUTPUT_CELL_LIST="${AES_RES}/wm_place_order_embed_v2.csv"
-export WM_VERIFY_CELL_LIST="${AES_RES}/wm_place_order_verify_v2.csv"
+export WM_OUTPUT_ODB="${AES_RES}/3_place_order_wm.odb"
+export WM_OUTPUT_DEF="${AES_RES}/3_place_order_wm.def"
+export WM_OUTPUT_CELL_LIST="${WM_OUTPUT_CELL_LIST:-${AES_RES}/wm_place_order_embed.csv}"
+export WM_VERIFY_CELL_LIST="${WM_VERIFY_CELL_LIST:-${AES_RES}/wm_place_order_verify.csv}"
 # ------------------------------------------------------------
 export WM_MESSAGE="${WM_MESSAGE:-place-ordering-wm-${DESIGN}}"
 export WM_GRID_NX="${WM_GRID_NX:-6}"

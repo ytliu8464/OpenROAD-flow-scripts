@@ -15,7 +15,7 @@ LOG_DIR="${SCRIPT_DIR}/wm_log"
 mkdir -p "${LOG_DIR}"
 LOG_FILE="${LOG_DIR}/${DESIGN}_run_cts_wm_$(date +%Y%m%d_%H%M%S).log"
 exec > >(tee -a "${LOG_FILE}") 2>&1
-echo "[run_place_wm] logging to ${LOG_FILE}"
+echo "[run_cts_wm] logging to ${LOG_FILE}"
 WM_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 GEN_KEY_DIR="${WM_ROOT}/gen_key"
 
