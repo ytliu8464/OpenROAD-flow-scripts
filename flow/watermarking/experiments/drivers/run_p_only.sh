@@ -14,6 +14,6 @@ DESIGN="${DESIGN}" PLATFORM="${PLATFORM}" WM_FLOW_VARIANT="${WM_FLOW_VARIANT}" \
 log "continue flow (CTS + route + finish) from watermarked 3_place"
 DESIGN="${DESIGN}" PLATFORM="${PLATFORM}" WM_FLOW_VARIANT="${WM_FLOW_VARIANT}" \
   FLOW_VARIANT="${FLOW_VARIANT}" \
-  DP_ODB="${FLOW_RES}/3_place_order_wm_v2.odb" \
+  DP_ODB="${FLOW_RES}/3_place_order_wm.odb" \
   "${PLACE_DIR}/run_ppa.sh"
 log "P-only done; results under flow/results/${PLATFORM}/${DESIGN}/${FLOW_VARIANT}"

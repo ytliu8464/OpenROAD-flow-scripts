@@ -32,6 +32,7 @@ FLOW_HOME: Path = Path(os.environ.get("ORFS_FLOW_HOME", str(_DEFAULT_FLOW_HOME))
 
 # Root of all per-module watermarking results
 WM_HOME: Path = FLOW_HOME / "watermarking"
+EXPERIMENTS_HOME: Path = WM_HOME / "experiments"
 
 
 def flow_results(platform: str, design: str, variant: str) -> Path:
@@ -44,6 +45,18 @@ def flow_logs(platform: str, design: str, variant: str) -> Path:
 
 def flow_reports(platform: str, design: str, variant: str) -> Path:
     return FLOW_HOME / "reports" / platform / design / variant
+
+
+def experiment_results(platform: str, design: str, variant: str) -> Path:
+    return EXPERIMENTS_HOME / "results" / platform / design / variant
+
+
+def experiment_logs(platform: str, design: str, variant: str) -> Path:
+    return EXPERIMENTS_HOME / "logs" / platform / design / variant
+
+
+def experiment_reports(platform: str, design: str, variant: str) -> Path:
+    return EXPERIMENTS_HOME / "reports" / platform / design / variant
 
 
 # ---------------------------------------------------------------------------
@@ -123,6 +136,37 @@ def list_wm_variants(module: str, platform: str, design: str) -> list:
             result.append((d.stat().st_mtime, d.name))
     result.sort(reverse=True)
     return [name for _, name in result]
+
+
+def find_latest_experiment_variant(platform: str, design: str,
+                                   prefix: Optional[str] = None,
+                                   require_6report: bool = True) -> Optional[str]:
+    """Return the newest completed variant under watermarking/experiments.
+
+    The experiment drivers are normally launched from ``watermarking/experiments``
+    and therefore write their PPA logs/results there, not under each watermarking
+    module directory.
+    """
+    base = EXPERIMENTS_HOME / "logs" / platform / design
+    if not base.is_dir():
+        return None
+    candidates = []
+    for d in base.iterdir():
+        if not d.is_dir():
+            continue
+        if prefix and not d.name.startswith(prefix):
+            continue
+        marker = d / "6_report.json"
+        if require_6report:
+            if not marker.exists():
+                continue
+            candidates.append((marker.stat().st_mtime, d.name))
+        else:
+            candidates.append((d.stat().st_mtime, d.name))
+    if not candidates:
+        return None
+    candidates.sort(reverse=True)
+    return candidates[0][1]
 
 
 @dataclass
@@ -299,6 +343,80 @@ def load_wm_metrics(module: str, platform: str, design: str,
     return rm
 
 
+def load_experiment_metrics(platform: str, design: str,
+                            variant: str) -> RefMetrics:
+    """Load PPA metrics for a PDMarks run stored by the experiments harness."""
+    logs = experiment_logs(platform, design, variant)
+    results = experiment_results(platform, design, variant)
+
+    rm = RefMetrics(platform=platform, design=design, variant=variant)
+    finish = _load_json(logs / "6_report.json")
+    rm.raw = finish
+
+    if finish:
+        if "finish__design__instance__count__stdcell" in finish:
+            rm.n_std_cells = int(finish["finish__design__instance__count__stdcell"])
+        if "finish__design__instance__count__macros" in finish:
+            rm.n_macros = int(finish["finish__design__instance__count__macros"])
+        if "finish__design__nets" in finish:
+            rm.n_nets = int(finish["finish__design__nets"])
+        if "finish__timing__setup__ws" in finish:
+            rm.wns_ns = float(finish["finish__timing__setup__ws"])
+        if "finish__timing__setup__tns" in finish:
+            rm.tns_ns = float(finish["finish__timing__setup__tns"])
+        if "finish__power__total" in finish:
+            rm.power_w = float(finish["finish__power__total"])
+
+    for cand in ("5_2_route.json", "5_route.json", "5_3_fillcell.json"):
+        j = _load_json(logs / cand)
+        for k in (
+            "detailedroute__route__wirelength",
+            "globalroute__route__wirelength",
+            "route__wirelength",
+        ):
+            if k in j:
+                try:
+                    rm.rwl_um = float(j[k])
+                except Exception:
+                    pass
+                break
+        if rm.rwl_um is not None:
+            break
+
+    rm.tcp_ns = _read_clock_period(results) or _read_clock_period(
+        flow_results(platform, design, variant)
+    )
+
+    total = 0.0
+    have_any = False
+    for stage in (
+        "1_2_yosys.log",
+        "2_1_floorplan.log",
+        "2_2_floorplan_macro.log",
+        "2_3_floorplan_tapcell.log",
+        "2_4_floorplan_pdn.log",
+        "3_1_place_gp_skip_io.log",
+        "3_2_place_iop.log",
+        "3_3_place_gp.log",
+        "3_4_place_resized.log",
+        "3_5_place_dp.log",
+        "4_1_cts.log",
+        "5_1_grt.log",
+        "5_2_route.log",
+        "5_3_fillcell.log",
+        "6_1_fill.log",
+        "6_report.log",
+    ):
+        t = _stage_runtime_seconds(logs / stage)
+        if t is not None:
+            total += t
+            have_any = True
+    if have_any:
+        rm.runtime_s = total
+
+    return rm
+
+
 def load_reference(platform: str, design: str, variant: str) -> RefMetrics:
     """Parse the on-disk reference run into a RefMetrics record.
 
@@ -382,14 +500,20 @@ def load_reference(platform: str, design: str, variant: str) -> RefMetrics:
 __all__ = [
     "FLOW_HOME",
     "WM_HOME",
+    "EXPERIMENTS_HOME",
     "flow_results",
     "flow_logs",
     "flow_reports",
+    "experiment_results",
+    "experiment_logs",
+    "experiment_reports",
     "wm_module_logs",
     "wm_module_results",
     "find_latest_wm_variant",
+    "find_latest_experiment_variant",
     "list_wm_variants",
     "load_wm_metrics",
+    "load_experiment_metrics",
     "RefMetrics",
     "load_reference",
 ]

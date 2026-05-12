@@ -22,3 +22,4 @@ make -C "${FLOW_HOME}" \
      FLOW_VARIANT="${WM_FLOW_VARIANT}"
 
 log "reference flow done"
+

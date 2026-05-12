@@ -33,7 +33,7 @@ echo "${BENCHES}" | while read -r PLAT DSGN VAR; do
     echo "[skip] no 3_place.odb for ${PLAT}/${DSGN}/${VAR}"
     continue
   fi
-  if [[ -f "${RES}/wm_place_order_embed_v2.csv" ]]; then
+  if [[ -f "${RES}/wm_place_order_embed.csv" ]]; then
     echo "[skip-p] ${PLAT}/${DSGN}/${VAR} already has place embed CSV"
   else
     echo "[run-p] ${PLAT}/${DSGN}/${VAR}"

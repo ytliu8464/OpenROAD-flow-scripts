@@ -184,7 +184,7 @@ done
 
 | Artifact | Location |
 |---|---|
-| Embed/verify CSVs, watermarked ODBs (`3_place_order_wm_v2.odb`, `4_cts_wm.odb`) | `flow/results/{plat}/{design}/{WM_FLOW_VARIANT}/` |
+| Embed/verify CSVs, watermarked ODBs (`3_place_order_wm.odb`, `4_cts_wm.odb`) | `flow/results/{plat}/{design}/{WM_FLOW_VARIANT}/` |
 | PPA stage logs, `6_report.json` | `flow/watermarking/{module}/logs/{plat}/{design}/{FLOW_VARIANT}/` |
 | Post-GRT/DRT ODBs (`5_1_grt.odb`, `5_route.odb`, `6_final.odb`) | `flow/watermarking/{module}/results/{plat}/{design}/{FLOW_VARIANT}/` |
 | Routing artifacts (`watermark_nets.txt`, `route_counts.csv`) | `flow/watermarking/routing_wrong_way/results/{plat}/{design}/{FLOW_VARIANT}/` |
@@ -252,6 +252,8 @@ python3.11 phase1_ppa.py
 # reads: flow/watermarking/{module}/logs/{plat}/{design}/{latest}/6_report.json
 #        flow/results/{plat}/{design}/{WM_FLOW_VARIANT}/wm_*.csv
 # writes: results/phase1/raw/ppa_*.json
+python3.11 aggregate.py --what ppa
+python3.11 render_tex.py
 ```
 
 ### Step 1-6. Compute watermark capacity (tab:capacity)

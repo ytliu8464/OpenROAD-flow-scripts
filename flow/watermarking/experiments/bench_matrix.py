@@ -46,9 +46,12 @@ ACTIVE_BENCHES: List[Bench] = [
     Bench("nangate45", "jpeg",           "watermarking-test1", "JPEG",   "NG45"),
     Bench("nangate45", "swerv_wrapper",  "base",               "SweRV",  "NG45"),
     Bench("nangate45", "ariane136",      "base_tcp3p5",        "Ariane", "NG45"),
+    Bench("nangate45", "bp_quad",        "base",        "BP",     "NG45"),
     Bench("asap7",     "aes",            "base",               "AES",    "ASAP7"),
     Bench("asap7",     "jpeg",           "base_tcp540",        "JPEG",   "ASAP7"),
     Bench("asap7",     "swerv_wrapper",  "base_tcp1455",       "SweRV",  "ASAP7"),
+    # Bench("asap7",     "ariane",  "base",       "Ariane",  "ASAP7"),
+    Bench("asap7",     "cva6",  "base_tcp950",       "CVA6",  "ASAP7"),
 ]
 
 

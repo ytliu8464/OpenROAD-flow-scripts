@@ -23,6 +23,8 @@ PPA_RES="${FLOW_HOME}/results/${PLATFORM}/${DESIGN}/${FLOW_VARIANT}"
 # 1) Placement embed
 log "P embed"
 DESIGN="${DESIGN}" PLATFORM="${PLATFORM}" WM_FLOW_VARIANT="${WM_FLOW_VARIANT}" \
+WM_OUTPUT_CELL_LIST="${FLOW_RES}/wm_place_order_embed_all_stage.csv" \
+WM_VERIFY_CELL_LIST="${FLOW_RES}/wm_place_order_verify_all_stage.csv" \
   "${PLACE_DIR}/run_place_wm.sh"
 
 # 2) CTS up to 4_cts.odb only, starting from the watermarked placement.
@@ -33,15 +35,15 @@ if [[ -z "${SINGULARITY_NAME:-}" ]]; then
   singularity exec -B /home -B /tmp -e "${SIF}" \
     env PROJ_DIR="${PROJ_DIR}" OPENROAD_EXE="${OPENROAD_EXE}" \
         FLOW_HOME="${FLOW_HOME}" DESIGN="${DESIGN}" PLATFORM="${PLATFORM}" \
-        FLOW_VARIANT="${FLOW_VARIANT}" SKIP_DP_WM=1 SKIP_RT_WM=1 \
-        DP_ODB="${FLOW_RES}/3_place_order_wm_v2.odb" \
+        FLOW_VARIANT="${FLOW_VARIANT}" SKIP_DP_WM=1 \
+        DP_ODB="${FLOW_RES}/3_place_order_wm.odb" \
         INPUTS_DIR="${FLOW_HOME}/OR_inputs/place_wm/${PLATFORM}/${DESIGN}" \
     bash -lc "make -C '${FLOW_HOME}' \
         DESIGN_CONFIG='${FLOW_HOME}/designs/${PLATFORM}/${DESIGN}/config.mk' \
         copy_inputs cts"
 else
-  SKIP_DP_WM=1 SKIP_RT_WM=1 \
-  DP_ODB="${FLOW_RES}/3_place_order_wm_v2.odb" \
+  SKIP_DP_WM=1 \
+  DP_ODB="${FLOW_RES}/3_place_order_wm.odb" \
   INPUTS_DIR="${FLOW_HOME}/OR_inputs/place_wm/${PLATFORM}/${DESIGN}" \
   make -C "${FLOW_HOME}" \
         DESIGN_CONFIG="${FLOW_HOME}/designs/${PLATFORM}/${DESIGN}/config.mk" \
@@ -54,7 +56,7 @@ DESIGN="${DESIGN}" PLATFORM="${PLATFORM}" \
 WM_FLOW_VARIANT="${FLOW_VARIANT}" \
 WM_CTS_INPUT="${PPA_RES}/4_cts.odb" \
 WM_CTS_OUTPUT_ODB="${PPA_RES}/4_cts_wm.odb" \
-WM_CTS_OUTPUT_CSV="${PPA_RES}/wm_cts_pairs_embed.csv" \
+WM_CTS_OUTPUT_CSV="${PPA_RES}/wm_cts_pairs_embed_all_stage.csv" \
   "${CTS_DIR}/run_cts_wm.sh"
 
 # 4) Route + finish with R-WM hook.
