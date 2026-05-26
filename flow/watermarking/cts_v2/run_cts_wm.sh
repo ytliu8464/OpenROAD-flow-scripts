@@ -7,9 +7,12 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 DESIGN="${DESIGN:-swerv_wrapper}"
+# DESIGN_NICKNAME = on-disk name ORFS uses (defaults to DESIGN).
+DESIGN_NICKNAME="${DESIGN_NICKNAME:-${DESIGN}}"
 PLATFORM="${PLATFORM:-asap7}"
 OWNER_ID="${OWNER_ID:-yiting}"
 WM_FLOW_VARIANT="${WM_FLOW_VARIANT:-base_tcp1455}"
+FLOW_VARIANT="${FLOW_VARIANT:-${WM_FLOW_VARIANT}}"
 
 LOG_DIR="${SCRIPT_DIR}/wm_log"
 mkdir -p "${LOG_DIR}"
@@ -18,10 +21,15 @@ exec > >(tee -a "${LOG_FILE}") 2>&1
 echo "[run_cts_wm] logging to ${LOG_FILE}"
 WM_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 GEN_KEY_DIR="${WM_ROOT}/gen_key"
+FLOW_DIR="$(cd "${WM_ROOT}/.." && pwd)"
+EXPERIMENTS_HOME="${EXPERIMENTS_HOME:-${FLOW_DIR}/watermarking/experiments}"
+WM_RESULTS_HOME="${WM_RESULTS_HOME:-${EXPERIMENTS_HOME}/results}"
 
 
-export FLOW_RES="${SCRIPT_DIR}/../../results/${PLATFORM}/${DESIGN}/${WM_FLOW_VARIANT}"
-mkdir -p "${FLOW_RES}"
+# Reference ORFS results dir and experiments output dir both use DESIGN_NICKNAME.
+export REF_RES="${SCRIPT_DIR}/../../results/${PLATFORM}/${DESIGN_NICKNAME}/${WM_FLOW_VARIANT}"
+export WM_OUT_RES="${WM_RESULTS:-${WM_RESULTS_HOME}/${PLATFORM}/${DESIGN_NICKNAME}/${FLOW_VARIANT}}"
+mkdir -p "${WM_OUT_RES}"
 
 # 1) Ensure gen_key/ has a keypair and a signed bundle with seed_cts.hex.
 KEYS_DIR="${GEN_KEY_DIR}/keys"
@@ -41,10 +49,10 @@ if [[ ! -f "${SEED_CTS}" ]]; then
 fi
 
 export WM_SEED_HEX="${SEED_CTS}"
-export WM_CTS_INPUT="${WM_CTS_INPUT:-${FLOW_RES}/4_cts.odb}"
+export WM_CTS_INPUT="${WM_CTS_INPUT:-${REF_RES}/4_cts.odb}"
 # --------------------- customized output name ---------------------
-export WM_CTS_OUTPUT_ODB="${WM_CTS_OUTPUT_ODB:-${FLOW_RES}/4_cts_wm.odb}"
-export WM_CTS_OUTPUT_CSV="${WM_CTS_OUTPUT_CSV:-${FLOW_RES}/wm_cts_pairs_embed.csv}"
+export WM_CTS_OUTPUT_ODB="${WM_CTS_OUTPUT_ODB:-${WM_OUT_RES}/4_cts_wm.odb}"
+export WM_CTS_OUTPUT_CSV="${WM_CTS_OUTPUT_CSV:-${WM_OUT_RES}/wm_cts_pairs_embed.csv}"
 # --------------------- customized output name ---------------------
 
 export WM_CTS_NUM_PAIRS="${WM_CTS_NUM_PAIRS:-32}"
@@ -66,7 +74,6 @@ export WM_CTS_CHANNEL_BUDGET="${WM_CTS_CHANNEL_BUDGET:-auto}"
 
 # Liberty files for STA timing checks (skew/slew headroom).
 # Auto-discovered from the ORFS Makefile when not set by the caller.
-FLOW_DIR="$(cd "${WM_ROOT}/.." && pwd)"
 if [[ -z "${WM_LIB_FILES:-}" ]]; then
   _design_config="./designs/${PLATFORM}/${DESIGN}/config.mk"
   _make_out="$(make -C "${FLOW_DIR}" print-LIB_FILES \
@@ -81,10 +88,11 @@ if [[ -z "${WM_LIB_FILES:-}" ]]; then
 fi
 export WM_LIB_FILES
 
-export WM_SDC="${WM_SDC:-${FLOW_RES}/4_cts.sdc}"
+export WM_SDC="${WM_SDC:-${REF_RES}/4_cts.sdc}"
 export WM_SETRC="${WM_SETRC:-${FLOW_DIR}/platforms/${PLATFORM}/setRC.tcl}"
 
 echo "[run_cts_wm] seed   : ${WM_SEED_HEX}"
+echo "[run_cts_wm] design : ${PLATFORM}/${DESIGN}/${WM_FLOW_VARIANT} -> ${FLOW_VARIANT}"
 echo "[run_cts_wm] input  : ${WM_CTS_INPUT}"
 echo "[run_cts_wm] output : ${WM_CTS_OUTPUT_ODB}"
 echo "[run_cts_wm] csv    : ${WM_CTS_OUTPUT_CSV}"

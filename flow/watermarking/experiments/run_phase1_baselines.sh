@@ -15,6 +15,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJ_DIR="${PROJ_DIR:-/home/fetzfs_projects/MISC-ytliu/watermarking}"
 FLOW_HOME="${FLOW_HOME:-${PROJ_DIR}/OR0415/OpenROAD-flow-scripts/flow}"
+EXPERIMENTS_HOME="${EXPERIMENTS_HOME:-${FLOW_HOME}/watermarking/experiments}"
 
 CELLSCATTER_SH="${SCRIPT_DIR}/baselines/cell_scattering/run.sh"
 BUFINS_SH="${SCRIPT_DIR}/baselines/buffer_insertion/run.sh"
@@ -37,6 +38,20 @@ done
 ts()  { date '+%Y-%m-%d %H:%M:%S'; }
 log() { echo "[$(ts)] [run_phase1_baselines] $*"; }
 
+# Resolve DESIGN_NICKNAME for (plat, design) by parsing config.mk; falls back
+# to ${design} when the design has no NICKNAME override.
+_resolve_nickname() {
+  local plat="$1" dsgn="$2" cfg nick
+  cfg="${FLOW_HOME}/designs/${plat}/${dsgn}/config.mk"
+  if [[ -f "${cfg}" ]]; then
+    nick="$(make -C "${FLOW_HOME}" --no-print-directory \
+        print-DESIGN_NICKNAME DESIGN_CONFIG="${cfg}" 2>/dev/null \
+      | sed -n 's/^DESIGN_NICKNAME[[:space:]]*[:=]\?[[:space:]]*//p' \
+      | head -n1)"
+  fi
+  echo "${nick:-${dsgn}}"
+}
+
 # Bench matrix (matches ACTIVE_BENCHES in bench_matrix.py)
 declare -a BENCHES=(
   "nangate45:aes:watermarking-test1"
@@ -55,7 +70,10 @@ FAILED=()
 
 run_one() {
   local plat="$1" design="$2" wm_variant="$3" flow_variant="$4" driver="$5"
-  local report="${FLOW_HOME}/logs/${plat}/${design}/${flow_variant}/6_report.json"
+  local nickname
+  nickname="$(_resolve_nickname "${plat}" "${design}")"
+  # experiments/logs/<plat>/<nickname>/<variant>/6_report.json
+  local report="${EXPERIMENTS_HOME}/logs/${plat}/${nickname}/${flow_variant}/6_report.json"
 
   if [[ "${SKIP_DONE}" == "1" && -f "${report}" ]]; then
     log "SKIP  ${plat}/${design}/${flow_variant} (already done)"
@@ -65,7 +83,7 @@ run_one() {
 
   log "START ${plat}/${design} -> ${flow_variant}"
   local t0="${SECONDS}"
-  if DESIGN="${design}" PLATFORM="${plat}" \
+  if DESIGN="${design}" DESIGN_NICKNAME="${nickname}" PLATFORM="${plat}" \
      WM_FLOW_VARIANT="${wm_variant}" \
      FLOW_VARIANT="${flow_variant}" \
      BASELINE_K="${BASELINE_K}" \

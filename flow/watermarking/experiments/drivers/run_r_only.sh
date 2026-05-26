@@ -6,7 +6,9 @@ ensure_keys
 
 ROUTE_DIR="${FLOW_HOME}/watermarking/routing_wrong_way"
 export FLOW_VARIANT="${FLOW_VARIANT:-pdmarks-r-only}"
+apply_adaptive_wm_params route
 
-DESIGN="${DESIGN}" PLATFORM="${PLATFORM}" WM_FLOW_VARIANT="${WM_FLOW_VARIANT}" \
+DESIGN="${DESIGN}" DESIGN_NICKNAME="${DESIGN_NICKNAME}" PLATFORM="${PLATFORM}" \
+  WM_FLOW_VARIANT="${WM_FLOW_VARIANT}" \
   FLOW_VARIANT="${FLOW_VARIANT}" "${ROUTE_DIR}/run.sh"
 log "R-only done"

@@ -27,6 +27,8 @@ if [[ -z "${SINGULARITY_NAME:-}" ]]; then
     FLOW_VARIANT="${FLOW_VARIANT:-baseline-bufins}" \
     BASELINE_K="${BASELINE_K:-}" \
     PROJ_DIR="${PROJ_DIR:-/home/fetzfs_projects/MISC-ytliu/watermarking}" \
+    EXPERIMENTS_HOME="${EXPERIMENTS_HOME:-}" \
+    WM_RESULTS_HOME="${WM_RESULTS_HOME:-}" \
     SINGULARITY_NAME="ispd26" \
     bash -lc "bash \"${BASH_SOURCE[0]}\""
 fi
@@ -34,6 +36,8 @@ fi
 export PROJ_DIR="${PROJ_DIR:-/home/fetzfs_projects/MISC-ytliu/watermarking}"
 export OPENROAD_EXE="${OPENROAD_EXE:-${PROJ_DIR}/OR0415/OpenROAD/build/bin/openroad}"
 export FLOW_HOME="${FLOW_HOME:-${PROJ_DIR}/OR0415/OpenROAD-flow-scripts/flow}"
+export EXPERIMENTS_HOME="${EXPERIMENTS_HOME:-${FLOW_HOME}/watermarking/experiments}"
+export WM_RESULTS_HOME="${WM_RESULTS_HOME:-${EXPERIMENTS_HOME}/results}"
 export FLOW_VARIANT="${FLOW_VARIANT:-baseline-bufins}"
 
 WM_DIR="${FLOW_HOME}/watermarking"
@@ -47,7 +51,8 @@ if [[ -z "${DESIGN:-}" || -z "${PLATFORM:-}" || -z "${WM_FLOW_VARIANT:-}" ]]; th
 fi
 
 REF_RES="${FLOW_HOME}/results/${PLATFORM}/${DESIGN}/${WM_FLOW_VARIANT}"
-OUT_RES="${FLOW_HOME}/results/${PLATFORM}/${DESIGN}/${FLOW_VARIANT}"
+OUT_RES="${WM_RESULTS_HOME}/${PLATFORM}/${DESIGN}/${FLOW_VARIANT}"
+mkdir -p "${OUT_RES}"
 SEED_HEX="${GEN_KEY_DIR}/out/${DESIGN}/seed_routing.hex"
 
 # ---- ensure keys exist ----
@@ -73,8 +78,8 @@ if [[ ! -f "${INPUT_ODB}" ]]; then
 fi
 
 EMBED_SCRIPT="${SCRIPT_DIR}/embed.py"
-OUT_ODB="${REF_RES}/4_cts_bufins.odb"
-EMBED_CSV="${REF_RES}/buffer_insertion_embed.csv"
+OUT_ODB="${OUT_RES}/4_cts_bufins.odb"
+EMBED_CSV="${OUT_RES}/buffer_insertion_embed.csv"
 
 ${OPENROAD_EXE} -python -exit "${EMBED_SCRIPT}" \
   --odb "${INPUT_ODB}" \
@@ -101,6 +106,7 @@ fi
 
 make -C "${FLOW_HOME}" \
   DESIGN_CONFIG="${FLOW_HOME}/designs/${PLATFORM}/${DESIGN}/config.mk" \
+  WORK_HOME="${EXPERIMENTS_HOME}" \
   FLOW_VARIANT="${FLOW_VARIANT}" \
   SKIP_RT_WM=1 \
   INPUTS_DIR="${INPUTS_DIR}" \

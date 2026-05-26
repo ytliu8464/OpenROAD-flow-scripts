@@ -64,6 +64,7 @@
 # DESIGN_CONFIG=./designs/asap7/swerv_wrapper/config.mk
 # DESIGN_CONFIG=./designs/asap7/uart/config.mk
 
+
 # DESIGN_CONFIG=./designs/intel16/aes/config.mk
 # DESIGN_CONFIG=./designs/intel16/gcd/config.mk
 
@@ -391,7 +392,7 @@ do-$(1)$(if $(4),$(4),):
 endef
 
 # ifeq ($(SKIP_DP_WM), 1)
-ifneq ($(filter 1,$(SKIP_DP_WM) $(SKIP_RT_WM)),)
+ifneq ($(filter 1,$(SKIP_DP_WM) $(SKIP_RT_WM) $(SKIP_FL_WM)),)
 # If SKIP_DP_WM or SKIP_RT_WM is set to 1, we do not need to redo the floorplan
 
 else
@@ -770,47 +771,85 @@ clean_finish:
 #
 # ==============================================================================
 
+
+
 .PHONY: copy_inputs
 copy_inputs:
+	@mkdir -p "$(RESULTS_DIR)"; \
+	if [ -d "$(INPUTS_DIR)" ]; then \
+		echo "[INFO] Copying inputs from $(INPUTS_DIR) to $(RESULTS_DIR)"; \
+		cp -r "$(INPUTS_DIR)/." "$(RESULTS_DIR)/"; \
+	else \
+		echo "[WARNING] INPUTS_DIR $(INPUTS_DIR) does not exist. Skipping copy_inputs."; \
+	fi; \
+	if [ -f "$(DP_ODB)" ]; then \
+		echo "[INFO] Copying DP_ODB_FILE: $(DP_ODB) to $(RESULTS_DIR)/3_place.odb"; \
+		cp "$(DP_ODB)" "$(RESULTS_DIR)/3_place.odb"; \
+	else \
+		echo "[WARNING] DP_ODB file $(DP_ODB) does not exist. Skipping."; \
+	fi
+
+
+.PHONY: copy_inputs_for_tcp
+copy_inputs_for_tcp:
 	@if [ -d "$(INPUTS_DIR)" ]; then \
 		echo "[INFO] Copying inputs from $(INPUTS_DIR) to $(RESULTS_DIR)"; \
 		mkdir -p "$(RESULTS_DIR)"; \
 		cp -r "$(INPUTS_DIR)/." "$(RESULTS_DIR)/"; \
-		if [ -f "$(DP_ODB)" ]; then \
-			echo "[INFO] Copying DP_ODB_FILE: $(DP_ODB) to $(RESULTS_DIR)/3_place.odb"; \
-			cp "$(DP_ODB)" "$(RESULTS_DIR)/3_place.odb"; \
-		else \
-			echo "[WARNING] DP_ODB file $(DP_ODB) does not exist. Skipping."; \
-		fi \
 	else \
 		echo "[WARNING] INPUTS_DIR $(INPUTS_DIR) does not exist. Skipping copy_inputs."; \
 	fi
 
+.PHONY: rename_sdc
+rename_sdc:
+	@if [ -f "$(RESULTS_DIR)/1_synth_TCP.sdc" ]; then \
+		sed -i "s/\$${CLOCK_PERIOD}/$(CLOCK_PERIOD)/g" "$(RESULTS_DIR)/1_synth_TCP.sdc"; \
+		echo "[INFO] Renaming 1_synth_TCP.sdc to 2_floorplan.sdc in $(RESULTS_DIR)"; \
+		cp "$(RESULTS_DIR)/1_synth_TCP.sdc" "$(RESULTS_DIR)/2_floorplan.sdc"; \
+		echo "[INFO] Renaming 1_synth_TCP.sdc to 2_1_floorplan.sdc in $(RESULTS_DIR)"; \
+		cp "$(RESULTS_DIR)/1_synth_TCP.sdc" "$(RESULTS_DIR)/2_1_floorplan.sdc"; \
+		echo "[INFO] Renaming 1_synth_TCP.sdc to 1_synth.sdc in $(RESULTS_DIR)"; \
+		cp "$(RESULTS_DIR)/1_synth_TCP.sdc" "$(RESULTS_DIR)/1_synth.sdc"; \
+	else \
+		echo "[WARNING] $(RESULTS_DIR)/1_synth_TCP.sdc does not exist. Skipping rename."; \
+	fi
+
+
 .PHONY: copy_inputs_v2
 copy_inputs_v2:
-	@if [ -d "$(INPUTS_DIR)" ]; then \
+	@mkdir -p "$(RESULTS_DIR)"; \
+	if [ -d "$(INPUTS_DIR)" ]; then \
 		echo "[INFO] Copying inputs from $(INPUTS_DIR) to $(RESULTS_DIR)"; \
-		mkdir -p "$(RESULTS_DIR)"; \
 		cp -r "$(INPUTS_DIR)/." "$(RESULTS_DIR)/"; \
-		if [ -f "$(CTS_ODB)" ]; then \
-			echo "[INFO] Copying CTS_ODB_FILE: $(CTS_ODB) to $(RESULTS_DIR)/4_cts.odb"; \
-			cp "$(CTS_ODB)" "$(RESULTS_DIR)/4_cts.odb"; \
-		else \
-			echo "[WARNING] CTS_ODB file $(CTS_ODB) does not exist. Skipping."; \
-		fi \
 	else \
 		echo "[WARNING] INPUTS_DIR $(INPUTS_DIR) does not exist. Skipping copy_inputs."; \
+	fi; \
+	if [ -f "$(CTS_ODB)" ]; then \
+		echo "[INFO] Copying CTS_ODB_FILE: $(CTS_ODB) to $(RESULTS_DIR)/4_cts.odb"; \
+		cp "$(CTS_ODB)" "$(RESULTS_DIR)/4_cts.odb"; \
+	else \
+		echo "[WARNING] CTS_ODB file $(CTS_ODB) does not exist. Skipping."; \
 	fi
 
 
 .PHONY: wm_cts_and_route 
 wm_cts_and_route: copy_inputs cts route finish 
+# Apply placement watermarking (c80.pdf)
 
 .PHONY: wm_route 
 wm_route: copy_inputs_v2 route finish 
 
 .PHONY: wm_route_wrong_way
 wm_route_wrong_way: copy_inputs_v2 route finish 
+# Apply routing watermarking (c80.pdf)
+
+.PHONY: wm_cts
+wm_cts: copy_inputs_v2 route finish 
+# Apply cts watermarking
+
+.PHONY: tcp_tune
+tcp_tune: copy_inputs_for_tcp rename_sdc place cts route finish
+
 
 .PHONY: check-openroad
 check-openroad:

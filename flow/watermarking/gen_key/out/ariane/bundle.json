@@ -1,0 +1,15 @@
+{
+  "M": {
+    "owner_id": "yiting",
+    "design_id": "ariane",
+    "date": "2026-05-21",
+    "tool": {
+      "name": "OpenROAD",
+      "commit": "9b754920a0fc74783fe0c514118a2a6aad8cf216"
+    },
+    "nonce": "4a862ae9ed7080d279b6b7390f634dd2"
+  },
+  "sig_b64": "j+qBQQX0LZjv0q8YKaJnuwWulE/PMAIHGa5BJvr4tE3jaZLXxsbwsbxDLlQVFuhnaCwovAcRM4N51TC1Os7WAg==",
+  "pk_fingerprint_sha256": "0299e4d97422a040edacd43f0c78dae2550308663705f8587a40d2f4eba8c80c",
+  "master_seed_hex": "6ac5f6e9c000057301f970bd86cdbfe2a3e8772d18cb9a07d445b79a73ba5f74"
+}

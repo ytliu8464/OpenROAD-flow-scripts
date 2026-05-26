@@ -12,12 +12,18 @@ export PROJ_DIR="${PROJ_DIR:-/home/fetzfs_projects/MISC-ytliu/watermarking}"
 export OPENROAD_EXE="${OPENROAD_EXE:-${PROJ_DIR}/OR0415/OpenROAD/build/bin/openroad}"
 export KEPLER_FORMAL_EXE="${KEPLER_FORMAL_EXE:-${PROJ_DIR}/OR0415/kepler-formal/build/src/bin/kepler-formal}"
 export FLOW_HOME="${FLOW_HOME:-${PROJ_DIR}/OR0415/OpenROAD-flow-scripts/flow}"
+export EXPERIMENTS_HOME="${EXPERIMENTS_HOME:-${FLOW_HOME}/watermarking/experiments}"
+export WM_RESULTS_HOME="${WM_RESULTS_HOME:-${EXPERIMENTS_HOME}/results}"
 
 export DESIGN="${DESIGN:-aes}"
+# DESIGN_NICKNAME = on-disk name ORFS uses (defaults to DESIGN).
+export DESIGN_NICKNAME="${DESIGN_NICKNAME:-${DESIGN}}"
 export PLATFORM="${PLATFORM:-nangate45}"
 export OWNER_ID="${OWNER_ID:-yiting}"
 export WM_FLOW_VARIANT="${WM_FLOW_VARIANT:-watermarking-test1}"
 export FLOW_VARIANT="${FLOW_VARIANT:-route-wm-wrong-way}"
+# experiments/results/<plat>/<nickname>/ mirrors the ORFS layout.
+export WM_RESULTS="${WM_RESULTS:-${WM_RESULTS_HOME}/${PLATFORM}/${DESIGN_NICKNAME}/${FLOW_VARIANT}}"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 LOG_DIR="${SCRIPT_DIR}/wm_log"
@@ -41,11 +47,15 @@ if [[ -z "${SINGULARITY_NAME:-}" ]]; then
     OPENROAD_EXE="${OPENROAD_EXE}" \
     KEPLER_FORMAL_EXE="${KEPLER_FORMAL_EXE}" \
     FLOW_HOME="${FLOW_HOME}" \
+    EXPERIMENTS_HOME="${EXPERIMENTS_HOME}" \
+    WM_RESULTS_HOME="${WM_RESULTS_HOME}" \
     DESIGN="${DESIGN}" \
+    DESIGN_NICKNAME="${DESIGN_NICKNAME}" \
     PLATFORM="${PLATFORM}" \
     OWNER_ID="${OWNER_ID}" \
     WM_FLOW_VARIANT="${WM_FLOW_VARIANT}" \
     FLOW_VARIANT="${FLOW_VARIANT}" \
+    WM_RESULTS="${WM_RESULTS}" \
     WATERMARK_FRACTION="${WATERMARK_FRACTION}" \
     WATERMARK_STRENGTH="${WATERMARK_STRENGTH}" \
     WATERMARK_P="${WATERMARK_P}" \
@@ -77,8 +87,10 @@ export WM_SEED_HEX="${SEED_ROUTING}"
 export PRE_GLOBAL_ROUTE_TCL="${WM_DIR}/pre_route_watermark.tcl"
 export POST_DETAIL_ROUTE_TCL="${WM_DIR}/post_route_watermark.tcl"
 
-export INPUTS_DIR="${FLOW_HOME}/OR_inputs/route_wm/${PLATFORM}/${DESIGN}"
-export CTS_ODB="${CTS_ODB:-${FLOW_HOME}/results/${PLATFORM}/${DESIGN}/${WM_FLOW_VARIANT}/4_cts.odb}"
+# Pre-staged OR_inputs and ORFS results both live under DESIGN_NICKNAME.
+# DESIGN_CONFIG further below uses DESIGN_NAME (the directory under designs/).
+export INPUTS_DIR="${FLOW_HOME}/OR_inputs/route_wm/${PLATFORM}/${DESIGN_NICKNAME}"
+export CTS_ODB="${CTS_ODB:-${FLOW_HOME}/results/${PLATFORM}/${DESIGN_NICKNAME}/${WM_FLOW_VARIANT}/4_cts.odb}"
 export SKIP_RT_WM="1"
 
 echo "[run] seed_routing : ${WM_SEED_HEX}"
@@ -88,4 +100,5 @@ echo "[run] strength lwm  : ${WATERMARK_STRENGTH}"
 make -f ${FLOW_HOME}/Makefile \
      DESIGN_CONFIG="${FLOW_HOME}/designs/${PLATFORM}/${DESIGN}/config.mk" \
      OPENROAD_EXE="${OPENROAD_EXE}" \
+     WORK_HOME="${EXPERIMENTS_HOME}" \
      wm_route_wrong_way

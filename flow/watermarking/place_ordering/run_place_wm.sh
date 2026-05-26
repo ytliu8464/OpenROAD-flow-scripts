@@ -26,12 +26,17 @@ finish_log() {
 trap finish_log EXIT
 
 DESIGN="${DESIGN:-swerv_wrapper}"
+# DESIGN_NICKNAME is the on-disk name ORFS uses for results/logs
+# (defaults to DESIGN unless the design's config.mk overrides it).
+DESIGN_NICKNAME="${DESIGN_NICKNAME:-${DESIGN}}"
 PLATFORM="${PLATFORM:-asap7}"
 OWNER_ID="${OWNER_ID:-yiting}"
-# Embed reads/writes ODB under flow/results/${PLATFORM}/${DESIGN}/${WM_FLOW_VARIANT}.
+# Embed reads the reference ODB under WM_FLOW_VARIANT and writes watermark
+# artifacts under FLOW_VARIANT.
 # Use ``base`` for default ASAP7 SDC; ``base_tcp540``/``base_tcp1455`` for tighter
-# corner sweeps. Should match the WM_FLOW_VARIANT used by run_ppa.sh.
+# corner sweeps. FLOW_VARIANT defaults to WM_FLOW_VARIANT for direct use.
 WM_FLOW_VARIANT="${WM_FLOW_VARIANT:-base_tcp1455}"
+FLOW_VARIANT="${FLOW_VARIANT:-${WM_FLOW_VARIANT}}"
 
 LOG_DIR="${SCRIPT_DIR}/wm_log"
 mkdir -p "${LOG_DIR}"
@@ -40,10 +45,15 @@ exec > >(tee -a "${LOG_FILE}") 2>&1
 log "logging to ${LOG_FILE}"
 WM_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 GEN_KEY_DIR="${WM_ROOT}/gen_key"
+FLOW_DIR="$(cd "${WM_ROOT}/.." && pwd)"
+EXPERIMENTS_HOME="${EXPERIMENTS_HOME:-${FLOW_DIR}/watermarking/experiments}"
+WM_RESULTS_HOME="${WM_RESULTS_HOME:-${EXPERIMENTS_HOME}/results}"
 
 
-export AES_RES="${SCRIPT_DIR}/../../results/${PLATFORM}/${DESIGN}/${WM_FLOW_VARIANT}"
-mkdir -p "${AES_RES}"
+# Reference ORFS results dir and experiments output dir both use DESIGN_NICKNAME.
+export REF_RES="${SCRIPT_DIR}/../../results/${PLATFORM}/${DESIGN_NICKNAME}/${WM_FLOW_VARIANT}"
+export WM_OUT_RES="${WM_RESULTS:-${WM_RESULTS_HOME}/${PLATFORM}/${DESIGN_NICKNAME}/${FLOW_VARIANT}}"
+mkdir -p "${WM_OUT_RES}"
 
 KEYS_DIR="${GEN_KEY_DIR}/keys"
 if [[ ! -f "${KEYS_DIR}/sk.pem" ]]; then
@@ -62,12 +72,12 @@ if [[ ! -f "${SEED_PLACEMENT}" ]]; then
 fi
 
 export WM_SEED_HEX="${SEED_PLACEMENT}"
-export WM_INPUT="${AES_RES}/3_place.odb"
+export WM_INPUT="${WM_INPUT:-${REF_RES}/3_place.odb}"
 # --------------------- output names ---------------------
-export WM_OUTPUT_ODB="${AES_RES}/3_place_order_wm.odb"
-export WM_OUTPUT_DEF="${AES_RES}/3_place_order_wm.def"
-export WM_OUTPUT_CELL_LIST="${WM_OUTPUT_CELL_LIST:-${AES_RES}/wm_place_order_embed.csv}"
-export WM_VERIFY_CELL_LIST="${WM_VERIFY_CELL_LIST:-${AES_RES}/wm_place_order_verify.csv}"
+export WM_OUTPUT_ODB="${WM_OUTPUT_ODB:-${WM_OUT_RES}/3_place_order_wm.odb}"
+export WM_OUTPUT_DEF="${WM_OUTPUT_DEF:-${WM_OUT_RES}/3_place_order_wm.def}"
+export WM_OUTPUT_CELL_LIST="${WM_OUTPUT_CELL_LIST:-${WM_OUT_RES}/wm_place_order_embed.csv}"
+export WM_VERIFY_CELL_LIST="${WM_VERIFY_CELL_LIST:-${WM_OUT_RES}/wm_place_order_verify.csv}"
 # ------------------------------------------------------------
 export WM_MESSAGE="${WM_MESSAGE:-place-ordering-wm-${DESIGN}}"
 export WM_GRID_NX="${WM_GRID_NX:-6}"
@@ -97,7 +107,6 @@ export WM_GUARD_DEGRADE_NS="${WM_GUARD_DEGRADE_NS:-0.02}"
 export WM_MAX_DISP_X="${WM_MAX_DISP_X:-5}"
 export WM_MAX_DISP_Y="${WM_MAX_DISP_Y:-5}"
 
-FLOW_DIR="$(cd "${WM_ROOT}/.." && pwd)"
 if [[ -z "${WM_LIB_FILES:-}" ]]; then
   _design_config="./designs/${PLATFORM}/${DESIGN}/config.mk"
   _make_out="$(make -C "${FLOW_DIR}" print-LIB_FILES \
@@ -109,10 +118,10 @@ if [[ -z "${WM_LIB_FILES:-}" ]]; then
   fi
 fi
 export WM_LIB_FILES
-export WM_SDC="${WM_SDC:-${AES_RES}/3_place.sdc}"
+export WM_SDC="${WM_SDC:-${REF_RES}/3_place.sdc}"
 export PYTHONUNBUFFERED="${PYTHONUNBUFFERED:-1}"
 
-log "design : ${DESIGN}/${PLATFORM}/${WM_FLOW_VARIANT}"
+log "design : ${DESIGN}/${PLATFORM}/${WM_FLOW_VARIANT} -> ${FLOW_VARIANT}"
 log "seed   : ${WM_SEED_HEX}"
 log "input  : ${WM_INPUT}"
 log "output : ${WM_OUTPUT_ODB}"

@@ -5,9 +5,9 @@ export KEPLER_FORMAL_EXE="${PROJ_DIR}/OR0415/kepler-formal/build/src/bin/kepler-
 export FLOW_HOME="${PROJ_DIR}/OR0415/OpenROAD-flow-scripts/flow"
 
 export DESIGN="ariane136"
-export FLOW_VARIANT="base_tcp3p5"
+export FLOW_VARIANT="ariane136_tcp1200"
 
-export PLATFORM="nangate45"
+export PLATFORM="asap7"
 
 # Automatically re-exec inside Singularity when run from the host.
 # SINGULARITY_NAME is set by the runtime whenever we are already inside a container.

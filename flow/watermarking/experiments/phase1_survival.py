@@ -5,24 +5,25 @@
 For the all-stage watermarked layout of each active bench, verify the
 watermark at four checkpoints:
 
-    post_place  : 3_place_order_wm_v2.odb  (embed_dir -- ref variant)
-    post_cts    : 4_cts_wm.odb             (embed_dir -- ref variant)
-    post_grt    : 5_1_grt.odb             (ppa_dir  -- place_ordering module results)
-    post_drt    : 5_route.odb             (ppa_dir  -- place_ordering module results)
+    post_place  : 3_place_order_wm.odb  (embed_dir  = pdmarks-all-stage)
+    post_cts    : 4_cts_wm.odb          (embed_dir  = pdmarks-all-stage)
+    post_grt    : 5_1_grt.odb           (ppa_dir    = pdmarks-all-stage-routed)
+    post_drt    : 5_route.odb           (ppa_dir    = pdmarks-all-stage-routed)
 
 Evidence rows emitted per design:
     r_P    placement extraction rate  (1 - x_P / X_P)
     r_C    CTS extraction rate         (1 - x_C / X_C)
     Z_R,p_R routing Z-statistic / one-sided p-value
-    r_all  combined evidence (product of per-stage P_c)
+    r_all  combined extraction rate across available evidence channels
 
 Artifact locations:
-  embed_dir = flow/results/<platform>/<design>/<wm_flow_variant>/
-              (embed/verify CSVs and watermarked ODBs 3_place*/4_cts*)
-  ppa_dir   = flow/watermarking/place_ordering/results/<platform>/<design>/<latest>/
-              (5_1_grt.odb, 5_route.odb produced by the PPA continuation run)
-  route_dir = flow/watermarking/routing_wrong_way/results/<platform>/<design>/<latest>/
-              (watermark_nets.txt, route_counts.csv)
+  embed_dir = experiments/results/<platform>/<design>/pdmarks-all-stage/
+              (embed/verify CSVs and watermarked ODBs 3_place_order_wm.odb,
+               4_cts_wm.odb)
+  ppa_dir   = experiments/results/<platform>/<design>/pdmarks-all-stage-routed/
+              (5_1_grt.odb, 5_route.odb, watermark_nets.txt)
+              Auto-discovered as the most-recent pdmarks-all-stage* dir that
+              contains 5_route.odb.  Override with PDMARKS_SURVIVAL_ROUTED_VARIANT.
 
 Outputs results/phase1/raw/survival_<plat>_<design>_<stage>_<evidence>.json
 """
@@ -41,10 +42,8 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 from bench_matrix import ACTIVE_BENCHES
 from lib.orfs import (
-    FLOW_HOME, flow_results,
-    wm_module_results, find_latest_wm_variant,
+    FLOW_HOME, experiment_results,
 )
-from lib.pc import pc_stage, pc_total
 from lib.route_stat import read_counts_csv, read_watermark_nets, \
     route_stat_from_counts
 
@@ -52,16 +51,71 @@ from lib.route_stat import read_counts_csv, read_watermark_nets, \
 OUT_DIR = HERE / "results" / "phase1" / "raw"
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 DUMP_SH = HERE / "tools" / "dump_route_counts.sh"
+ALPHA_R = 0.05
 
 # Checkpoints: (stage_name, odb_name, which_dir)
-# "embed"  -> embed_dir (flow/results/{wm_flow_variant})
-# "ppa"    -> ppa_dir   (place_ordering module results, latest run)
+# "embed"  -> embed_dir  (pdmarks-all-stage)
+# "ppa"    -> ppa_dir    (pdmarks-all-stage-routed, auto-discovered)
 CHECKPOINTS = (
-    ("post_place", "3_place_order_wm_v2.odb", "embed"),
+    ("post_place", "3_place_order_wm.odb",    "embed"),
     ("post_cts",   "4_cts_wm.odb",            "embed"),
     ("post_grt",   "5_1_grt.odb",             "ppa"),
     ("post_drt",   "5_route.odb",             "ppa"),
 )
+
+
+def _is_false_flag(value: str) -> bool:
+    return value in ("0", "False", "false", "mismatch")
+
+
+def _is_true_flag(value: str) -> bool:
+    return value in ("1", "True", "true", "missing")
+
+
+def _read_place_verify_csv(verify_csv: Path) -> tuple[int, int]:
+    """Return (total constraints, missing constraints) from place verifier CSV.
+
+    Older verifier outputs are row-wise and expose an ``ok`` column.  The
+    current place_ordering verifier writes one summary row with
+    ``constraints_ok`` and ``constraints_total``.  Accept both formats so the
+    survival table can be regenerated from cached verifier artifacts.
+    """
+    if not verify_csv.exists():
+        return 0, 0
+    big = miss = 0
+    for row in csv.DictReader(open(verify_csv)):
+        if "constraints_ok" in row and "constraints_total" in row:
+            total = int(float(row.get("constraints_total") or 0))
+            ok = int(float(row.get("constraints_ok") or 0))
+            big += total
+            miss += max(total - ok, 0)
+            continue
+        big += 1
+        if _is_false_flag(row.get("ok", "1")):
+            miss += 1
+    return big, miss
+
+
+def _read_cts_verify_csv(verify_csv: Path) -> tuple[int, int]:
+    """Return (total pairs, missing/unsatisfied pairs) from CTS verifier CSV."""
+    if not verify_csv.exists():
+        return 0, 0
+    big = miss = 0
+    for row in csv.DictReader(open(verify_csv)):
+        if "pairs_ok" in row and "pairs_total" in row:
+            total = int(float(row.get("pairs_total") or 0))
+            ok = int(float(row.get("pairs_ok") or 0))
+            big += total
+            miss += max(total - ok, 0)
+            continue
+        big += 1
+        if _is_false_flag(row.get("ok", "1")):
+            miss += 1
+        elif _is_false_flag(row.get("satisfied", "True")):
+            miss += 1
+        elif _is_true_flag(row.get("missing", "False")):
+            miss += 1
+    return big, miss
 
 
 def _placement_verify(embed_dir: Path, stage_odb: Path) -> tuple:
@@ -69,7 +123,9 @@ def _placement_verify(embed_dir: Path, stage_odb: Path) -> tuple:
 
     embed_dir contains the embed CSV; the verify output CSV is written there too.
     """
-    embed_csv = embed_dir / "wm_place_order_embed_v2.csv"
+    embed_csv = embed_dir / "wm_place_order_embed_all_stage.csv"
+    if not embed_csv.exists():
+        embed_csv = embed_dir / "wm_place_order_embed.csv"
     verify_csv = embed_dir / f"wm_place_order_verify_{stage_odb.stem}.csv"
     if not embed_csv.exists() or not stage_odb.exists():
         return 0, 0
@@ -85,27 +141,23 @@ def _placement_verify(embed_dir: Path, stage_odb: Path) -> tuple:
                        check=True,
                        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     except Exception:
-        return 0, 0
-    big = miss = 0
-    if verify_csv.exists():
-        for row in csv.DictReader(open(verify_csv)):
-            big += 1
-            if row.get("ok", "1") in ("0", "False", "false", "mismatch"):
-                miss += 1
-    return big, miss
+        pass
+    return _read_place_verify_csv(verify_csv)
 
 
 def _cts_verify(embed_dir: Path, stage_odb: Path) -> tuple:
     """Return (X_C, x_C) via cts_v2 verify on stage_odb."""
-    embed_csv = embed_dir / "wm_cts_pairs_embed.csv"
+    embed_csv = embed_dir / "wm_cts_pairs_embed_all_stage.csv"
+    if not embed_csv.exists():
+        embed_csv = embed_dir / "wm_cts_pairs_embed.csv"
     if not embed_csv.exists() or not stage_odb.exists():
         return 0, 0
     sh = FLOW_HOME / "watermarking" / "cts_v2" / "cts_wm.sh"
     verify_csv = embed_dir / f"wm_cts_verify_{stage_odb.stem}.csv"
     env = {
-        "WM_CTS_CELL_LIST":    str(embed_csv),
+        "WM_CELL_LIST":        str(embed_csv),
         "WM_CTS_VERIFY_INPUT": str(stage_odb),
-        "WM_CTS_STAGE_REPORT": str(verify_csv),
+        "WM_CTS_VERIFY_CSV":   str(verify_csv),
     }
     try:
         subprocess.run(["bash", str(sh), "verify"],
@@ -113,14 +165,8 @@ def _cts_verify(embed_dir: Path, stage_odb: Path) -> tuple:
                        check=True,
                        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     except Exception:
-        return 0, 0
-    big = miss = 0
-    if verify_csv.exists():
-        for row in csv.DictReader(open(verify_csv)):
-            big += 1
-            if row.get("ok", "1") in ("0", "False", "false", "mismatch"):
-                miss += 1
-    return big, miss
+        pass
+    return _read_cts_verify_csv(verify_csv)
 
 
 def _routing_stat(route_dir: Path, stage_odb: Path):
@@ -146,28 +192,62 @@ def _routing_stat(route_dir: Path, stage_odb: Path):
     return route_stat_from_counts(counts, wm_set)
 
 
+def _find_routed_dir(platform: str, design: str, fallback: Path) -> Path:
+    """Return the most-recent pdmarks-all-stage* results dir with 5_route.odb.
+
+    The all-stage flow splits across two variants: the embed step writes into
+    pdmarks-all-stage (placement/CTS ODBs + embed CSVs), while the routing +
+    finishing step writes into pdmarks-all-stage-routed (5_*.odb, watermark_nets.txt).
+    This helper finds the routed variant automatically so callers do not need to
+    hard-code it.  Falls back to ``fallback`` when no routed variant is found.
+    """
+    base = experiment_results(platform, design, "")  # .../results/<plat>/<design>
+    best: Optional[Path] = None
+    best_mtime = -1.0
+    for d in (base.iterdir() if base.is_dir() else []):
+        if not d.is_dir() or not d.name.startswith("pdmarks-all-stage"):
+            continue
+        if (d / "5_route.odb").exists():
+            mtime = d.stat().st_mtime
+            if mtime > best_mtime:
+                best_mtime = mtime
+                best = d
+    return best if best is not None else fallback
+
+
 def _resolve_dirs(b) -> tuple[Path, Optional[Path], Optional[Path]]:
     """Return (embed_dir, ppa_dir, route_dir) for bench b.
 
-    embed_dir  -- always the reference flow results dir (guaranteed to exist if
-                  embedding has been run).
-    ppa_dir    -- place_ordering module results dir (None if not yet run).
-    route_dir  -- routing_wrong_way module results dir (None if not yet run).
+    embed_dir  -- pdmarks-all-stage results dir (embed CSVs, early ODBs).
+    ppa_dir    -- pdmarks-all-stage-routed results dir (routing ODBs,
+                  watermark_nets.txt).  Auto-discovered; None if not found.
+    route_dir  -- same as ppa_dir when watermark_nets.txt is present.
     """
-    embed_dir = flow_results(b.platform, b.design, b.wm_flow_variant)
+    embed_variant = os.environ.get("PDMARKS_SURVIVAL_EMBED_VARIANT", "pdmarks-all-stage")
+    # Paths under experiments/results/ mirror the ORFS layout and use
+    # DESIGN_NICKNAME, not DESIGN_NAME.
+    nickname = b.design_nickname
+    embed_dir = experiment_results(b.platform, nickname, embed_variant)
 
-    ppa_var = find_latest_wm_variant("place_ordering", b.platform, b.design)
-    ppa_dir: Optional[Path] = (
-        wm_module_results("place_ordering", b.platform, b.design, ppa_var)
-        if ppa_var else None
-    )
+    _routed_override = os.environ.get("PDMARKS_SURVIVAL_ROUTED_VARIANT", "")
+    if _routed_override:
+        ppa_dir: Optional[Path] = experiment_results(b.platform, nickname, _routed_override)
+        if not ppa_dir.exists():
+            ppa_dir = None
+    else:
+        # Auto-discover: find the most recent pdmarks-all-stage* dir that has
+        # 5_route.odb (written by the routing + finishing step).
+        found = _find_routed_dir(b.platform, nickname, embed_dir)
+        ppa_dir = found if found != embed_dir else None
+        # If discovery fell back to embed_dir (no routed variant), keep ppa_dir
+        # as embed_dir so post_grt/post_drt can still attempt verification when
+        # the entire flow ran in a single variant.
+        if ppa_dir is None and (embed_dir / "5_route.odb").exists():
+            ppa_dir = embed_dir
 
-    route_var = find_latest_wm_variant("routing_wrong_way", b.platform, b.design)
     route_dir: Optional[Path] = (
-        wm_module_results("routing_wrong_way", b.platform, b.design, route_var)
-        if route_var else None
+        ppa_dir if ppa_dir and (ppa_dir / "watermark_nets.txt").exists() else None
     )
-
     return embed_dir, ppa_dir, route_dir
 
 
@@ -179,7 +259,7 @@ def main():
     for b in ACTIVE_BENCHES:
         embed_dir, ppa_dir, route_dir = _resolve_dirs(b)
         variant_label = (
-            f"embed:{b.wm_flow_variant}"
+            f"embed:{embed_dir.name}"
             + (f"; ppa:{ppa_dir.name}" if ppa_dir else "")
             + (f"; route:{route_dir.name}" if route_dir else "")
         )
@@ -210,26 +290,39 @@ def main():
             # Routing evidence (post_grt / post_drt only)
             zr_value = ""
             pR = None
-            if stage in ("post_grt", "post_drt") and route_dir is not None:
+            r_R = None
+            if (b.platform == "nangate45" and stage in ("post_grt", "post_drt")
+                    and route_dir is not None):
                 rs = _routing_stat(route_dir, odb)
                 if rs is not None:
                     zr_value = f"Z={rs.Z_R:.3f}; p={rs.p_R:.3e}"
                     pR = rs.p_R
+                    r_R = 1.0 if rs.p_R <= ALPHA_R else 0.0
             slug = f"{b.platform}_{b.design}_{stage}_ZR"
             emit({"platform": b.platform, "design": b.design,
                   "variant": variant_label, "evidence": "Z_R,p_R",
-                  "stage": stage, "value": zr_value}, slug)
+                  "stage": stage, "value": zr_value,
+                  "p_R": "" if pR is None else pR,
+                  "r_R": "" if r_R is None else r_R,
+                  "alpha_R": ALPHA_R}, slug)
 
-            # Combined r_all
-            pcs = []
-            if X_P > 0: pcs.append(pc_stage(X_P, x_P, 0.5))
-            if X_C > 0: pcs.append(pc_stage(X_C, x_C, 0.5))
-            if pR is not None: pcs.append(pR)
-            r_all = f"{pc_total(*pcs):.3e}" if pcs else ""
+            # Combined r_all.  Routing watermarking is applied during detailed
+            # routing, so post-GRT r_all only combines placement and CTS.
+            r_parts = []
+            if X_P > 0:
+                r_parts.append(r_P)
+            if X_C > 0:
+                r_parts.append(r_C)
+            if stage == "post_drt" and r_R is not None:
+                r_parts.append(r_R)
+            r_all = (sum(r_parts) / len(r_parts)) if r_parts else ""
             slug = f"{b.platform}_{b.design}_{stage}_rall"
             emit({"platform": b.platform, "design": b.design,
                   "variant": variant_label, "evidence": "r_all",
-                  "stage": stage, "value": r_all}, slug)
+                  "stage": stage, "value": r_all,
+                  "r_P": r_P, "r_C": r_C,
+                  "r_R": "" if r_R is None else r_R,
+                  "alpha_R": ALPHA_R}, slug)
 
             print(f"[survival] {b.platform}/{b.design}/{stage}: "
                   f"r_P={r_P!r} r_C={r_C!r} Z_R/p_R={zr_value!r} r_all={r_all!r}")

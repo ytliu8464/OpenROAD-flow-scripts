@@ -1,0 +1,41 @@
+# DESIGN=aes PLATFORM=nangate45 WM_FLOW_VARIANT=watermarking-test1 bash drivers/run_p_only.sh       # placement only
+# DESIGN=aes PLATFORM=nangate45 WM_FLOW_VARIANT=watermarking-test1 bash drivers/run_c_only.sh       # CTS only
+# DESIGN=aes PLATFORM=nangate45 WM_FLOW_VARIANT=watermarking-test1 bash drivers/run_r_only.sh       # routing only
+# DESIGN=aes PLATFORM=nangate45 WM_FLOW_VARIANT=watermarking-test1 bash drivers/run_all_stage.sh    # P → C → R chained (all-stage)
+# DESIGN=bp_multi_top PLATFORM=nangate45 WM_FLOW_VARIANT=base_tcp3p2 bash drivers/run_p_only.sh       # placement only
+# DESIGN=bp_multi_top PLATFORM=nangate45 WM_FLOW_VARIANT=base_tcp3p2 bash drivers/run_c_only.sh       # CTS only
+# DESIGN=bp_multi_top PLATFORM=nangate45 WM_FLOW_VARIANT=base_tcp3p2 bash drivers/run_r_only.sh       # routing only
+# DESIGN=bp_multi_top PLATFORM=nangate45 WM_FLOW_VARIANT=base_tcp3p2 bash drivers/run_all_stage.sh    # P → C → R chained (all-stage)
+# DESIGN=jpeg PLATFORM=nangate45 WM_FLOW_VARIANT=watermarking-test1 bash drivers/run_p_only.sh       # placement only
+# DESIGN=jpeg PLATFORM=nangate45 WM_FLOW_VARIANT=watermarking-test1 bash drivers/run_c_only.sh       # CTS only
+# DESIGN=jpeg PLATFORM=nangate45 WM_FLOW_VARIANT=watermarking-test1 bash drivers/run_r_only.sh       # routing only
+# DESIGN=jpeg PLATFORM=nangate45 WM_FLOW_VARIANT=watermarking-test1 bash drivers/run_all_stage.sh    # P → C → R chained (all-stage)
+# DESIGN=swerv_wrapper PLATFORM=nangate45 WM_FLOW_VARIANT=base bash drivers/run_p_only.sh       # placement only
+# DESIGN=swerv_wrapper PLATFORM=nangate45 WM_FLOW_VARIANT=base bash drivers/run_c_only.sh       # CTS only
+# DESIGN=swerv_wrapper PLATFORM=nangate45 WM_FLOW_VARIANT=base bash drivers/run_r_only.sh       # routing only
+# DESIGN=swerv_wrapper PLATFORM=nangate45 WM_FLOW_VARIANT=base bash drivers/run_all_stage.sh    # P → C → R chained (all-stage)
+# DESIGN=ariane136 PLATFORM=nangate45 WM_FLOW_VARIANT=base_tcp3p5 bash drivers/run_p_only.sh       # placement only
+# DESIGN=ariane136 PLATFORM=nangate45 WM_FLOW_VARIANT=base_tcp3p5 bash drivers/run_c_only.sh       # CTS only
+# DESIGN=ariane136 PLATFORM=nangate45 WM_FLOW_VARIANT=base_tcp3p5 bash drivers/run_r_only.sh       # routing only
+# DESIGN=ariane136 PLATFORM=nangate45 WM_FLOW_VARIANT=base_tcp3p5 bash drivers/run_all_stage.sh    # P → C → R chained (all-stage)
+# DESIGN=aes PLATFORM=asap7 WM_FLOW_VARIANT=base bash drivers/run_p_only.sh       # placement only
+# DESIGN=aes PLATFORM=asap7 WM_FLOW_VARIANT=base bash drivers/run_c_only.sh       # CTS only
+# DESIGN=aes PLATFORM=asap7 WM_FLOW_VARIANT=base bash drivers/run_r_only.sh       # routing only
+# DESIGN=aes PLATFORM=asap7 WM_FLOW_VARIANT=base bash drivers/run_all_stage.sh    # P → C → R chained (all-stage)
+# DESIGN=jpeg PLATFORM=asap7 WM_FLOW_VARIANT=base_tcp540 bash drivers/run_p_only.sh       # placement only
+# DESIGN=jpeg PLATFORM=asap7 WM_FLOW_VARIANT=base_tcp540 bash drivers/run_c_only.sh       # CTS only
+# DESIGN=jpeg PLATFORM=asap7 WM_FLOW_VARIANT=base_tcp540 bash drivers/run_r_only.sh       # routing only
+# DESIGN=jpeg PLATFORM=asap7 WM_FLOW_VARIANT=base_tcp540 bash drivers/run_all_stage.sh    # P → C → R chained (all-stage)
+# DESIGN=swerv_wrapper PLATFORM=asap7 WM_FLOW_VARIANT=base_tcp1455 bash drivers/run_p_only.sh       # placement only
+# DESIGN=swerv_wrapper PLATFORM=asap7 WM_FLOW_VARIANT=base_tcp1455 bash drivers/run_c_only.sh       # CTS only
+# DESIGN=swerv_wrapper PLATFORM=asap7 WM_FLOW_VARIANT=base_tcp1455 bash drivers/run_r_only.sh       # routing only
+# DESIGN=swerv_wrapper PLATFORM=asap7 WM_FLOW_VARIANT=base_tcp1455 bash drivers/run_all_stage.sh    # P → C → R chained (all-stage)
+DESIGN=cva6 PLATFORM=asap7 WM_FLOW_VARIANT=base_tcp950 bash drivers/run_p_only.sh       # placement only
+DESIGN=cva6 PLATFORM=asap7 WM_FLOW_VARIANT=base_tcp950 bash drivers/run_c_only.sh       # CTS only
+DESIGN=cva6 PLATFORM=asap7 WM_FLOW_VARIANT=base_tcp950 bash drivers/run_r_only.sh       # routing only
+DESIGN=cva6 PLATFORM=asap7 WM_FLOW_VARIANT=base_tcp950 bash drivers/run_all_stage.sh    # P → C → R chained (all-stage)
+# DESIGN=ariane PLATFORM=asap7 WM_FLOW_VARIANT=base_fixed bash drivers/run_p_only.sh       # placement only
+# DESIGN=ariane PLATFORM=asap7 WM_FLOW_VARIANT=base_fixed bash drivers/run_c_only.sh       # CTS only
+# DESIGN=ariane PLATFORM=asap7 WM_FLOW_VARIANT=base_fixed bash drivers/run_r_only.sh       # routing only
+# DESIGN=ariane PLATFORM=asap7 WM_FLOW_VARIANT=base_fixed bash drivers/run_all_stage.sh    # P → C → R chained (all-stage)
+

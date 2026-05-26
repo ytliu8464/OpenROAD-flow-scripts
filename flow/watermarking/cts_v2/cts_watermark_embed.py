@@ -294,6 +294,48 @@ def _filter_candidate_pairs(
     return out
 
 
+def _count_pre_attempt_feasible(
+    pairs: Sequence[Tuple[str, object, object]],
+    seed: bytes,
+    delta_dbu: float,
+) -> int:
+    """Count pairs that have *some* chance of success in the attempt loop.
+
+    Mirrors the static, HMAC-derived feasibility checks ``_try_flip_parity``
+    performs *before* it runs incremental STA (paper §sensitivity /
+    tab:capacity).  A pair is "pre-attempt feasible" iff one of:
+
+      (a) **zero-edit success**: ``seq_fanout(target_lcb) % 2 == target_bit``
+          already -- the watermark bit is satisfied without moving any FF, or
+      (b) **flippable**: ``_boundary_ffs(target_lcb, other_lcb, delta_dbu)``
+          is non-empty -- at least one sequential sink on target_lcb's
+          fanout lies within ``delta_dbu`` of the boundary plane, so the
+          embedder has a candidate FF it can hand off to ``other_lcb``.
+
+    The HMAC-derived ``(target_bit, target_is_a)`` is exactly what the
+    attempt loop computes at line ~827, so the counts here match what the
+    embedder would see if it tried *every* candidate.
+
+    This is the meaningful CTS "eligible" denominator for the capacity
+    table: pairs that pass the static feasibility filter, regardless of
+    attempt-time dynamics (``used_lcbs`` dedup, channel-budget caps, and
+    incremental-STA convergence in ``_try_flip_parity``).  The gap between
+    this count and ``satisfied`` is the timing-success rate per pair.
+    """
+    n = 0
+    for pair_key, la, lb in pairs:
+        na, nb = la.getName(), lb.getName()
+        target_bit, target_is_a = cc.pair_bits(seed, pair_key, na, nb)
+        target_lcb = la if target_is_a == 1 else lb
+        other_lcb  = lb if target_is_a == 1 else la
+        if (cc.lcb_seq_fanout(target_lcb) % 2) == target_bit:
+            n += 1
+            continue
+        if _boundary_ffs(target_lcb, other_lcb, delta_dbu):
+            n += 1
+    return n
+
+
 def _build_cross_channel_pairs(
     pure_lcbs: Sequence[object],
     quasi_lcbs: Sequence[object],
@@ -677,6 +719,16 @@ def main() -> int:
     print(
         f"[cts_wm_embed] candidates after filters: pure={len(pure_cand)} "
         f"quasi_leaf={len(quasi_cand)} pure_quasi={len(mixed_cand)}"
+    )
+    # Pre-attempt feasibility = static HMAC-derived check the attempt loop
+    # would apply before running incremental STA.  This is the meaningful
+    # CTS "eligible" denominator for paper tab:capacity (see helper docstring).
+    pre_pure  = _count_pre_attempt_feasible(pure_cand,  seed, delta_dbu)
+    pre_quasi = _count_pre_attempt_feasible(quasi_cand, seed, delta_dbu)
+    pre_mixed = _count_pre_attempt_feasible(mixed_cand, seed, delta_dbu)
+    print(
+        f"[cts_wm_embed] pre-attempt feasible: pure={pre_pure} "
+        f"quasi_leaf={pre_quasi} pure_quasi={pre_mixed}"
     )
     mode, pure_cap, quasi_cap = _parse_channel_budget(args.channel_budget)
     rng_pure = cc.master_rng(seed, b"cts_pure")
