@@ -75,10 +75,8 @@ def _is_buffer_or_clock(inst) -> bool:
 
 
 def _is_eligible(inst) -> bool:
-    from odb import dbPlacementStatus
-    status = inst.getPlacementStatus()
-    if status == dbPlacementStatus.FIRM or status == dbPlacementStatus.LOCKED:
-        return False
+    # FIRM/LOCKED status is already covered by isFixed() in this OpenROAD
+    # build (odb does not export dbPlacementStatus to Python).
     if inst.isFixed():
         return False
     if not inst.isPlaced():
@@ -256,16 +254,35 @@ def main(argv: List[str]) -> None:
     ry0 = max(cy_min, acy - half_h)
     rx1 = min(cx_max, rx0 + W_w)
     ry1 = min(cy_max, ry0 + W_h)
-    _log(f"AM: anchor={best_name}  score={best_score:.4f}  region=({rx0},{ry0})-({rx1},{ry1})")
 
-    # cells inside region
-    names_inside = [
-        nm for (cx, cy, _w, _h, nm) in eligible_recs
-        if rx0 <= cx < rx1 and ry0 <= cy < ry1
-    ]
-    _log(f"cells inside region: {len(names_inside)}")
+    def _names_in(x0, y0, x1, y1):
+        return [nm for (cx, cy, _w, _h, nm) in eligible_recs
+                if x0 <= cx < x1 and y0 <= cy < y1]
+
+    # The score deliberately anchors on a LOW-DENSITY cell (low-impact region),
+    # so the nominal W_w x W_h window around it often holds far fewer than K
+    # eligible cells.  Grow the region symmetrically (in row/site steps) until
+    # it contains at least K eligible cells or it spans the whole core, so
+    # AutoMarks embeds its full keyed signature like the original method.
+    names_inside = _names_in(rx0, ry0, rx1, ry1)
+    grow_w = W_w
+    grow_h = W_h
+    guard = 0
+    while len(names_inside) < K and guard < 4096:
+        guard += 1
+        grow_w += 2 * site_w
+        grow_h += 2 * row_h
+        rx0 = max(cx_min, acx - grow_w // 2)
+        ry0 = max(cy_min, acy - grow_h // 2)
+        rx1 = min(cx_max, rx0 + grow_w)
+        ry1 = min(cy_max, ry0 + grow_h)
+        names_inside = _names_in(rx0, ry0, rx1, ry1)
+        if rx0 <= cx_min and ry0 <= cy_min and rx1 >= cx_max and ry1 >= cy_max:
+            break
+    _log(f"AM: anchor={best_name}  score={best_score:.4f}  "
+         f"region=({rx0},{ry0})-({rx1},{ry1})  cells_inside={len(names_inside)}")
     if len(names_inside) < K:
-        _log(f"WARNING: only {len(names_inside)} cells in region; reducing K to {len(names_inside)}")
+        _log(f"WARNING: only {len(names_inside)} cells in region after growth; reducing K to {len(names_inside)}")
         K = len(names_inside)
 
     selected = select_top_k(seed, b"automarks_dw", names_inside, K)

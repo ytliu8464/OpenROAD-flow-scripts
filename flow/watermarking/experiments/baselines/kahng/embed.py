@@ -65,10 +65,8 @@ def _is_buffer_or_clock(inst) -> bool:
 
 
 def _is_eligible(inst) -> bool:
-    from odb import dbPlacementStatus
-    status = inst.getPlacementStatus()
-    if status == dbPlacementStatus.FIRM or status == dbPlacementStatus.LOCKED:
-        return False
+    # FIRM/LOCKED status is already covered by isFixed() in this OpenROAD
+    # build (odb does not export dbPlacementStatus to Python).
     if inst.isFixed():
         return False
     if not inst.isPlaced():

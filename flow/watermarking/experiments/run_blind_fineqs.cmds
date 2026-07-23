@@ -1,0 +1,35 @@
+# Run from /home/fetzfs_projects/MISC-ytliu/watermarking/OR0415/OpenROAD-flow-scripts/flow/watermarking/experiments
+# Fine-q_s blind extraction sweep -- REROUTE-FREE (placement+CTS only).
+# Produces blind_<plat>_<design>_placement_qs<q>.json (r_P) and _cts_qs<q>.json (r_C).
+# Routing vote r_R is reused from the existing coarse all_stage runs (no reroute).
+# Each line independent -> distribute across servers. Use host python3.11 (NOT sbpy).
+python3.11 attacks/blind/run_blind_attack.py --stages placement,cts --qs-list 0.30 --designs jpeg
+python3.11 attacks/blind/run_blind_attack.py --stages placement,cts --qs-list 0.40 --designs jpeg
+python3.11 attacks/blind/run_blind_attack.py --stages placement,cts --qs-list 0.60 --designs jpeg
+python3.11 attacks/blind/run_blind_attack.py --stages placement,cts --qs-list 0.70 --designs jpeg
+python3.11 attacks/blind/run_blind_attack.py --stages placement,cts --qs-list 0.90 --designs jpeg
+python3.11 attacks/blind/run_blind_attack.py --stages placement,cts --qs-list 0.30 --designs swerv_wrapper
+python3.11 attacks/blind/run_blind_attack.py --stages placement,cts --qs-list 0.40 --designs swerv_wrapper
+python3.11 attacks/blind/run_blind_attack.py --stages placement,cts --qs-list 0.60 --designs swerv_wrapper
+python3.11 attacks/blind/run_blind_attack.py --stages placement,cts --qs-list 0.70 --designs swerv_wrapper
+python3.11 attacks/blind/run_blind_attack.py --stages placement,cts --qs-list 0.90 --designs swerv_wrapper
+python3.11 attacks/blind/run_blind_attack.py --stages placement,cts --qs-list 0.30 --designs ariane136
+python3.11 attacks/blind/run_blind_attack.py --stages placement,cts --qs-list 0.40 --designs ariane136
+python3.11 attacks/blind/run_blind_attack.py --stages placement,cts --qs-list 0.60 --designs ariane136
+python3.11 attacks/blind/run_blind_attack.py --stages placement,cts --qs-list 0.70 --designs ariane136
+python3.11 attacks/blind/run_blind_attack.py --stages placement,cts --qs-list 0.90 --designs ariane136
+python3.11 attacks/blind/run_blind_attack.py --stages placement,cts --qs-list 0.30 --designs bp_multi_top
+python3.11 attacks/blind/run_blind_attack.py --stages placement,cts --qs-list 0.40 --designs bp_multi_top
+python3.11 attacks/blind/run_blind_attack.py --stages placement,cts --qs-list 0.60 --designs bp_multi_top
+python3.11 attacks/blind/run_blind_attack.py --stages placement,cts --qs-list 0.70 --designs bp_multi_top
+python3.11 attacks/blind/run_blind_attack.py --stages placement,cts --qs-list 0.90 --designs bp_multi_top
+python3.11 attacks/blind/run_blind_attack.py --stages placement,cts --qs-list 0.30 --designs cva6
+python3.11 attacks/blind/run_blind_attack.py --stages placement,cts --qs-list 0.40 --designs cva6
+python3.11 attacks/blind/run_blind_attack.py --stages placement,cts --qs-list 0.60 --designs cva6
+python3.11 attacks/blind/run_blind_attack.py --stages placement,cts --qs-list 0.70 --designs cva6
+python3.11 attacks/blind/run_blind_attack.py --stages placement,cts --qs-list 0.90 --designs cva6
+python3.11 attacks/blind/run_blind_attack.py --stages placement,cts --qs-list 0.30 --designs ariane
+python3.11 attacks/blind/run_blind_attack.py --stages placement,cts --qs-list 0.40 --designs ariane
+python3.11 attacks/blind/run_blind_attack.py --stages placement,cts --qs-list 0.60 --designs ariane
+python3.11 attacks/blind/run_blind_attack.py --stages placement,cts --qs-list 0.70 --designs ariane
+python3.11 attacks/blind/run_blind_attack.py --stages placement,cts --qs-list 0.90 --designs ariane

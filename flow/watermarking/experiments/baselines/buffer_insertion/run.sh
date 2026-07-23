@@ -24,6 +24,7 @@ if [[ -z "${SINGULARITY_NAME:-}" ]]; then
     DESIGN="${DESIGN}" \
     PLATFORM="${PLATFORM}" \
     WM_FLOW_VARIANT="${WM_FLOW_VARIANT}" \
+    DESIGN_NICKNAME="${DESIGN_NICKNAME:-}" \
     FLOW_VARIANT="${FLOW_VARIANT:-baseline-bufins}" \
     BASELINE_K="${BASELINE_K:-}" \
     PROJ_DIR="${PROJ_DIR:-/home/fetzfs_projects/MISC-ytliu/watermarking}" \
@@ -38,6 +39,7 @@ export OPENROAD_EXE="${OPENROAD_EXE:-${PROJ_DIR}/OR0415/OpenROAD/build/bin/openr
 export FLOW_HOME="${FLOW_HOME:-${PROJ_DIR}/OR0415/OpenROAD-flow-scripts/flow}"
 export EXPERIMENTS_HOME="${EXPERIMENTS_HOME:-${FLOW_HOME}/watermarking/experiments}"
 export WM_RESULTS_HOME="${WM_RESULTS_HOME:-${EXPERIMENTS_HOME}/results}"
+export DESIGN_NICKNAME="${DESIGN_NICKNAME:-${DESIGN}}"
 export FLOW_VARIANT="${FLOW_VARIANT:-baseline-bufins}"
 
 WM_DIR="${FLOW_HOME}/watermarking"
@@ -50,8 +52,8 @@ if [[ -z "${DESIGN:-}" || -z "${PLATFORM:-}" || -z "${WM_FLOW_VARIANT:-}" ]]; th
   echo "ERROR: DESIGN, PLATFORM, WM_FLOW_VARIANT must be set" >&2; exit 2
 fi
 
-REF_RES="${FLOW_HOME}/results/${PLATFORM}/${DESIGN}/${WM_FLOW_VARIANT}"
-OUT_RES="${WM_RESULTS_HOME}/${PLATFORM}/${DESIGN}/${FLOW_VARIANT}"
+REF_RES="${FLOW_HOME}/results/${PLATFORM}/${DESIGN_NICKNAME}/${WM_FLOW_VARIANT}"
+OUT_RES="${WM_RESULTS_HOME}/${PLATFORM}/${DESIGN_NICKNAME}/${FLOW_VARIANT}"
 mkdir -p "${OUT_RES}"
 SEED_HEX="${GEN_KEY_DIR}/out/${DESIGN}/seed_routing.hex"
 
@@ -98,10 +100,10 @@ log "embed complete; watermarked ODB at ${OUT_ODB}"
 log "running route + finish via make wm_route_wrong_way ..."
 
 # Use the CTS-stage inputs directory (contains netlist, libs, etc.)
-INPUTS_DIR="${FLOW_HOME}/OR_inputs/cts_wm/${PLATFORM}/${DESIGN}"
+INPUTS_DIR="${FLOW_HOME}/OR_inputs/cts_wm/${PLATFORM}/${DESIGN_NICKNAME}"
 # Fallback to place_wm inputs if cts_wm doesn't exist
 if [[ ! -d "${INPUTS_DIR}" ]]; then
-  INPUTS_DIR="${FLOW_HOME}/OR_inputs/place_wm/${PLATFORM}/${DESIGN}"
+  INPUTS_DIR="${FLOW_HOME}/OR_inputs/place_wm/${PLATFORM}/${DESIGN_NICKNAME}"
 fi
 
 make -C "${FLOW_HOME}" \

@@ -39,8 +39,13 @@ if {
   if { [env_var_exists_and_non_empty PWR_NETS_VOLTAGES] } {
     dict for {pwrNetName pwrNetVoltage} $::env(PWR_NETS_VOLTAGES) {
       set_pdnsim_net_voltage -net ${pwrNetName} -voltage ${pwrNetVoltage}
-      analyze_power_grid -net ${pwrNetName} \
-        -error_file $::env(REPORTS_DIR)/${pwrNetName}.rpt
+      catch {
+        analyze_power_grid -net ${pwrNetName} \
+          -error_file $::env(REPORTS_DIR)/${pwrNetName}.rpt
+      } err
+      if { $err ne "" } {
+        puts "Warning: IR drop analysis failed for $pwrNetName: $err"
+      }
     }
   } else {
     puts "IR drop analysis for power nets is skipped because PWR_NETS_VOLTAGES is undefined"
@@ -48,8 +53,13 @@ if {
   if { [env_var_exists_and_non_empty GND_NETS_VOLTAGES] } {
     dict for {gndNetName gndNetVoltage} $::env(GND_NETS_VOLTAGES) {
       set_pdnsim_net_voltage -net ${gndNetName} -voltage ${gndNetVoltage}
-      analyze_power_grid -net ${gndNetName} \
-        -error_file $::env(REPORTS_DIR)/${gndNetName}.rpt
+      catch {
+        analyze_power_grid -net ${gndNetName} \
+          -error_file $::env(REPORTS_DIR)/${gndNetName}.rpt
+      } err
+      if { $err ne "" } {
+        puts "Warning: IR drop analysis failed for $gndNetName: $err"
+      }
     }
   } else {
     puts "IR drop analysis for ground nets is skipped because GND_NETS_VOLTAGES is undefined"
@@ -66,7 +76,12 @@ report_metrics 6 "finish"
 
 source_step_tcl POST FINAL_REPORT
 
-# Save a final image if openroad is compiled with the gui
+# Save a final image if openroad is compiled with the gui.
+# Wrapped in `catch` so a headless / read-only-FS environment (e.g. inside
+# Singularity where /run/user/<uid> is not writable -> GUI-0077) does not
+# abort the whole final-report step.  Snapshots are nice-to-have, not load-bearing.
 if { [ord::openroad_gui_compiled] } {
-  gui::show "source $::env(SCRIPTS_DIR)/save_images.tcl" false
+  if { [catch { gui::show "source $::env(SCRIPTS_DIR)/save_images.tcl" false } err] } {
+    puts "Warning: GUI snapshot step failed (likely headless / read-only FS): $err"
+  }
 }

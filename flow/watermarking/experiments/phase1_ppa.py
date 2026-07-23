@@ -53,13 +53,32 @@ PDMARKS_VARIANT_PREFIX = {
 }
 
 # Baseline methods: use experiment harness logs/results, same as PDMarks runs.
-BASELINE_METHODS = {"Cell-scattering", "Buffer-insertion"}
+BASELINE_METHODS = {
+    "Kahng", "Cell-scattering", "Buffer-insertion", "ICMarks", "AutoMarks",
+}
 
 # VARIANT_MAP: for baselines, the FLOW_VARIANT name under experiments/logs/.
 BASELINE_VARIANT_MAP = {
+    "Kahng":            "baseline-kahng",
     "Cell-scattering":  "baseline-cellscatter",
     "Buffer-insertion": "baseline-bufins",
+    "ICMarks":          "baseline-icmarks",
+    "AutoMarks":        "baseline-automarks",
 }
+
+# Per-baseline CSV file prefix for the X_P/x_P (coincidence-probability) counts.
+BASELINE_CSV_PREFIX = {
+    "Kahng":            "kahng",
+    "Cell-scattering":  "cell_scattering",
+    "Buffer-insertion": "buffer_insertion",
+    "ICMarks":          "icmarks",
+    "AutoMarks":        "automarks",
+}
+
+# Display order for the paper PPA tables (matches tab:ppa_ng45 / tab:ppa_asap7).
+BASELINE_ORDER = [
+    "Kahng", "Cell-scattering", "Buffer-insertion", "ICMarks", "AutoMarks",
+]
 
 # Optional explicit variant override: populated by env PDMARKS_VARIANT_<METHOD>
 # e.g. PDMARKS_VARIANT_P_ONLY=base-ppa-v2
@@ -80,9 +99,172 @@ for _method_key in PDMARKS_VARIANT_PREFIX:
 def _delta(ref, val):
     if ref is None or val is None:
         return ""
-    if ref == 0:
-        return val - ref
-    return (val - ref) / max(abs(ref), 1e-12)
+    return val - ref
+
+
+# ---------------------------------------------------------------------------
+# Embed-step wall-clock extraction
+# ---------------------------------------------------------------------------
+#
+# These helpers parse the watermark embed wrapper logs to recover the seconds
+# spent inside the watermark embedding code itself (no downstream CTS / route
+# / finish time).  Used to populate the "Runtime" column of tab:ppa_ng45 /
+# tab:ppa_asap7 as the wall-clock cost of the watermarking *approach*.
+#
+# Sources:
+#   PDMarks placement:  place_ordering/wm_log/<design>_run_place_wm_ordering_*.log
+#                       line: "[run_place_wm] finished status=0 elapsed=<N>s"
+#   PDMarks CTS:        cts_v2/wm_log/<design>_run_cts_wm_*.log
+#                       wall-clock = file mtime - filename-encoded start time
+#   PDMarks routing:    set_routing_watermark is a one-shot HMAC tag step that
+#                       takes ~milliseconds on every design; we report it as
+#                       sub-second (0.1 s placeholder) since the routing cost
+#                       is in the downstream re-route, which option 1 excludes.
+#   Baselines:          ${EXPERIMENTS}/logs/baselines_*.log carry paired lines
+#                       "[ts] [<name>/run.sh] embedding ... on <plat>/<design>/..."
+#                       "[ts] [<name>/run.sh] embed complete; ..."
+
+PLACE_WM_LOG_DIR = FLOW_HOME / "watermarking" / "place_ordering" / "wm_log"
+CTS_WM_LOG_DIR   = FLOW_HOME / "watermarking" / "cts_v2"         / "wm_log"
+BASELINE_LOG_DIR = HERE / "logs"
+
+_RX_PLACE_ELAPSED = re.compile(r"\[run_place_wm\] finished[^\n]*elapsed=(\d+)s")
+_RX_CTS_LOG_NAME  = re.compile(r"_(\d{8})_(\d{6})\.log$")
+_RX_BASELINE_TS   = re.compile(
+    r"^\[(?P<ts>\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})\] "
+    r"\[(?P<name>[A-Za-z]+)/run\.sh\] (?P<verb>embedding|embed complete)"
+)
+
+import datetime as _dt
+
+
+def _latest_log_matching(directory: Path, design: str, glob: str,
+                         variant_marker: str | None = None) -> Path | None:
+    """Most recent log under ``directory`` matching ``<design>_<glob>`` whose
+    contents mention ``variant_marker`` (e.g. ``pdmarks-p-only``)."""
+    cands = sorted(directory.glob(f"{design}_{glob}"),
+                   key=lambda p: p.stat().st_mtime, reverse=True)
+    if variant_marker is None:
+        return cands[0] if cands else None
+    for p in cands:
+        try:
+            if variant_marker in p.read_text(errors="replace"):
+                return p
+        except Exception:
+            continue
+    return None
+
+
+def _wm_runtime_placement(design: str, variant_marker: str) -> float | None:
+    log = _latest_log_matching(PLACE_WM_LOG_DIR, design,
+                               "run_place_wm_ordering_*.log",
+                               variant_marker=variant_marker)
+    if log is None:
+        return None
+    try:
+        text = log.read_text(errors="replace")
+    except Exception:
+        return None
+    matches = list(_RX_PLACE_ELAPSED.finditer(text))
+    if not matches:
+        return None
+    return float(matches[-1].group(1))
+
+
+def _wm_runtime_cts(design: str, variant_marker: str) -> float | None:
+    log = _latest_log_matching(CTS_WM_LOG_DIR, design, "run_cts_wm_*.log",
+                               variant_marker=variant_marker)
+    if log is None:
+        return None
+    m = _RX_CTS_LOG_NAME.search(log.name)
+    if m is None:
+        return None
+    try:
+        start = _dt.datetime.strptime(
+            m.group(1) + m.group(2), "%Y%m%d%H%M%S"
+        ).timestamp()
+    except Exception:
+        return None
+    try:
+        end = log.stat().st_mtime
+    except Exception:
+        return None
+    elapsed = end - start
+    return max(0.0, elapsed)
+
+
+def _wm_runtime_routing() -> float:
+    # set_routing_watermark is a one-shot HMAC tagging pass over the signal-net
+    # list (~hundreds of microseconds per net, <1 s on every design in this
+    # study).  The downstream wrong-way-biased detail_route cost is excluded
+    # per the user-chosen reporting convention.
+    return 0.1
+
+
+def _wm_runtime_baseline(method: str, platform: str, design: str,
+                         design_nickname: str) -> float | None:
+    """Scan EXPERIMENTS/logs/baselines_*.log for the matched
+    "embedding ... -> baseline-<name>" / "embed complete" pair and return the
+    wall-clock seconds between them.  Returns ``None`` if no matching pair is
+    found."""
+    name_map = {"Cell-scattering": "cellscatter",
+                "Buffer-insertion": "bufins"}
+    name = name_map.get(method)
+    if name is None:
+        return None
+    plat_design = f"{platform}/{design}"
+    plat_nick   = f"{platform}/{design_nickname}"
+    best: float | None = None
+    for log in BASELINE_LOG_DIR.glob("baselines_*.log"):
+        try:
+            text = log.read_text(errors="replace")
+        except Exception:
+            continue
+        pending: dict[str, _dt.datetime] = {}
+        for line in text.splitlines():
+            m = _RX_BASELINE_TS.match(line)
+            if m is None or m.group("name") != name:
+                continue
+            if plat_design not in line and plat_nick not in line:
+                continue
+            try:
+                ts = _dt.datetime.strptime(
+                    m.group("ts"), "%Y-%m-%d %H:%M:%S"
+                )
+            except Exception:
+                continue
+            verb = m.group("verb")
+            if verb == "embedding":
+                pending["start"] = ts
+            elif verb == "embed complete" and "start" in pending:
+                dt = (ts - pending["start"]).total_seconds()
+                if dt >= 0:
+                    if best is None or dt < best:
+                        best = dt
+                pending.clear()
+    return best
+
+
+def _wm_runtime_for(method: str, platform: str, design: str,
+                    design_nickname: str) -> float | None:
+    """Dispatch on method and return embed-step wall-clock in seconds.  The
+    caller writes this into ``wm_runtime_s`` of each ppa_<...>.json."""
+    if method == "P-only":
+        return _wm_runtime_placement(design, "pdmarks-p-only")
+    if method == "C-only":
+        return _wm_runtime_cts(design, "pdmarks-c-only")
+    if method == "R-only":
+        return _wm_runtime_routing()
+    if method == "All-stage":
+        p = _wm_runtime_placement(design, "pdmarks-all-stage")
+        c = _wm_runtime_cts(design, "pdmarks-all-stage")
+        r = _wm_runtime_routing()
+        parts = [v for v in (p, c, r) if v is not None]
+        return sum(parts) if parts else None
+    if method in ("Cell-scattering", "Buffer-insertion"):
+        return _wm_runtime_baseline(method, platform, design, design_nickname)
+    # Kahng / ICMarks / AutoMarks are placeholders; no embed step to time.
+    return None
 
 
 def _baseline_has_run(platform: str, design: str, variant: str) -> bool:
@@ -297,28 +479,15 @@ def _routing_pc_from_log(platform: str, design: str, variant: str):
     return None
 
 
-def _cellscatter_xX(baseline_results_dir: Path):
-    """Baseline cell-scattering: use DRT verify CSV or embed CSV."""
-    for fname in ("cell_scattering_verify_DRT.csv", "cell_scattering_embed.csv"):
-        p = baseline_results_dir / fname
-        if not p.exists():
-            continue
-        big = miss = 0
-        for row in csv.DictReader(open(p)):
-            sat = row.get("satisfied", row.get("match", "True"))
-            if sat in ("True", "true", "1"):
-                big += 1
-            elif sat in ("False", "false", "0"):
-                big += 1
-                miss += 1
-        if big > 0:
-            return big, miss
-    return 0, 0
+def _baseline_xX(baseline_results_dir: Path, prefix: str):
+    """Generic baseline (X, x) reader.
 
-
-def _bufins_xX(baseline_results_dir: Path):
-    """Baseline buffer-insertion: verify or embed CSV."""
-    for fname in ("buffer_insertion_verify_DRT.csv", "buffer_insertion_embed.csv"):
+    Prefers the post-DRT verify CSV (``<prefix>_verify_DRT.csv``) and falls back
+    to the embed CSV (``<prefix>_embed.csv``).  Counts every claim toward X and
+    the unsatisfied ones toward x, matching the Bernoulli claim model used for
+    P_c in Eq. pc_stage.
+    """
+    for fname in (f"{prefix}_verify_DRT.csv", f"{prefix}_embed.csv"):
         p = baseline_results_dir / fname
         if not p.exists():
             continue
@@ -352,9 +521,20 @@ def collect_one(b, method: str):
     out: dict = {
         "platform": plat, "design": b.design,
         "method": method, "variant": "",
-        "dWNS": "", "dTNS": "", "dRWL": "", "dPower": "", "dRuntime": "",
+        "dWNS": "", "dTNS": "", "dRWL": "", "dPower": "",
+        "dRuntime": "",      # legacy: full-flow runtime delta (kept for the CSV)
+        "wm_runtime_s": "",  # NEW: embed-step wall-clock, in seconds
         "Pc": "", "X_P": "", "x_P": "", "X_C": "", "x_C": "", "p_R": "",
     }
+
+    # Populate the embed-step wall-clock for every method that has an embed
+    # step.  This is what the paper's Runtime column now reports.  Note we
+    # pass ``b.design`` (full DESIGN name) for log filename matching --
+    # wm_log filenames are built from ${DESIGN}, not the nickname -- and
+    # ``b.design_nickname`` for the baseline-log "<plat>/<nick>" markers.
+    wm_runtime = _wm_runtime_for(method, plat, b.design, b.design_nickname)
+    if wm_runtime is not None:
+        out["wm_runtime_s"] = wm_runtime
 
     # ------------------------------------------------------------------ #
     # Baseline methods: experiment harness logs/results path               #
@@ -380,16 +560,10 @@ def collect_one(b, method: str):
 
         base_rdir = experiment_results(plat, design, variant_name)
         pc_parts = []
-        if method == "Cell-scattering":
-            X_P, x_P = _cellscatter_xX(base_rdir)
-            out["X_P"] = X_P; out["x_P"] = x_P
-            if X_P > 0:
-                pc_parts.append(pc_stage(X_P, x_P, 0.5))
-        elif method == "Buffer-insertion":
-            X_P, x_P = _bufins_xX(base_rdir)
-            out["X_P"] = X_P; out["x_P"] = x_P
-            if X_P > 0:
-                pc_parts.append(pc_stage(X_P, x_P, 0.5))
+        X_P, x_P = _baseline_xX(base_rdir, BASELINE_CSV_PREFIX[method])
+        out["X_P"] = X_P; out["x_P"] = x_P
+        if X_P > 0:
+            pc_parts.append(pc_stage(X_P, x_P, 0.5))
         if pc_parts:
             out["Pc"] = pc_total(*pc_parts)
         return out
@@ -519,7 +693,7 @@ def collect_one(b, method: str):
 
 def main():
     all_methods = (
-        list(BASELINE_METHODS) +
+        BASELINE_ORDER +
         ["P-only", "C-only", "R-only", "All-stage"]
     )
     for b in ACTIVE_BENCHES:

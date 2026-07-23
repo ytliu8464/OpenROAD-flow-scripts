@@ -1,0 +1,11 @@
+# Post-route PPA at each design's blind-attack q* (placement stage).
+# Run from experiments/. Each line independent -> distribute across servers.
+# Step [2] (CTS+route+finish) is the heavy part.
+bash run_postroute_qs.sh nangate45 jpeg           0.4 placement
+bash run_postroute_qs.sh nangate45 swerv_wrapper  0.7 placement
+bash run_postroute_qs.sh nangate45 ariane136      0.4 placement
+bash run_postroute_qs.sh nangate45 bp_multi_top   0.3 placement
+bash run_postroute_qs.sh asap7     jpeg           0.2 placement
+bash run_postroute_qs.sh asap7     swerv_wrapper  0.2 placement
+bash run_postroute_qs.sh asap7     cva6           0.1 placement
+bash run_postroute_qs.sh asap7     ariane         0.2 placement

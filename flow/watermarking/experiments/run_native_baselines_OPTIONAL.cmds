@@ -1,0 +1,17 @@
+# cd /home/fetzfs_projects/MISC-ytliu/watermarking/OR0415/OpenROAD-flow-scripts/flow/watermarking/experiments before running. OPTIONAL: native K ~= current K; re-run only for a fully consistent back-end.
+DESIGN=jpeg PLATFORM=nangate45 WM_FLOW_VARIANT=watermarking-test1 BASELINE_K=100 FLOW_VARIANT=baseline-cellscatter bash baselines/cell_scattering/run.sh
+DESIGN=swerv_wrapper PLATFORM=nangate45 WM_FLOW_VARIANT=base BASELINE_K=100 FLOW_VARIANT=baseline-cellscatter bash baselines/cell_scattering/run.sh
+DESIGN=ariane136 PLATFORM=nangate45 WM_FLOW_VARIANT=base_tcp3p5 BASELINE_K=100 FLOW_VARIANT=baseline-cellscatter bash baselines/cell_scattering/run.sh
+DESIGN=bp_multi_top PLATFORM=nangate45 WM_FLOW_VARIANT=base_tcp3p2 BASELINE_K=100 FLOW_VARIANT=baseline-cellscatter bash baselines/cell_scattering/run.sh
+DESIGN=jpeg PLATFORM=asap7 WM_FLOW_VARIANT=base_tcp540 BASELINE_K=100 FLOW_VARIANT=baseline-cellscatter bash baselines/cell_scattering/run.sh
+DESIGN=swerv_wrapper PLATFORM=asap7 WM_FLOW_VARIANT=base_tcp1455 BASELINE_K=100 FLOW_VARIANT=baseline-cellscatter bash baselines/cell_scattering/run.sh
+DESIGN=cva6 PLATFORM=asap7 WM_FLOW_VARIANT=base_tcp950 BASELINE_K=100 FLOW_VARIANT=baseline-cellscatter bash baselines/cell_scattering/run.sh
+DESIGN=ariane PLATFORM=asap7 WM_FLOW_VARIANT=base_fixed BASELINE_K=100 FLOW_VARIANT=baseline-cellscatter bash baselines/cell_scattering/run.sh
+DESIGN=jpeg PLATFORM=nangate45 WM_FLOW_VARIANT=watermarking-test1 BASELINE_K=128 FLOW_VARIANT=baseline-bufins bash baselines/buffer_insertion/run.sh
+DESIGN=swerv_wrapper PLATFORM=nangate45 WM_FLOW_VARIANT=base BASELINE_K=128 FLOW_VARIANT=baseline-bufins bash baselines/buffer_insertion/run.sh
+DESIGN=ariane136 PLATFORM=nangate45 WM_FLOW_VARIANT=base_tcp3p5 BASELINE_K=128 FLOW_VARIANT=baseline-bufins bash baselines/buffer_insertion/run.sh
+DESIGN=bp_multi_top PLATFORM=nangate45 WM_FLOW_VARIANT=base_tcp3p2 BASELINE_K=128 FLOW_VARIANT=baseline-bufins bash baselines/buffer_insertion/run.sh
+DESIGN=jpeg PLATFORM=asap7 WM_FLOW_VARIANT=base_tcp540 BASELINE_K=128 FLOW_VARIANT=baseline-bufins bash baselines/buffer_insertion/run.sh
+DESIGN=swerv_wrapper PLATFORM=asap7 WM_FLOW_VARIANT=base_tcp1455 BASELINE_K=128 FLOW_VARIANT=baseline-bufins bash baselines/buffer_insertion/run.sh
+DESIGN=cva6 PLATFORM=asap7 WM_FLOW_VARIANT=base_tcp950 BASELINE_K=128 FLOW_VARIANT=baseline-bufins bash baselines/buffer_insertion/run.sh
+DESIGN=ariane PLATFORM=asap7 WM_FLOW_VARIANT=base_fixed BASELINE_K=128 FLOW_VARIANT=baseline-bufins bash baselines/buffer_insertion/run.sh

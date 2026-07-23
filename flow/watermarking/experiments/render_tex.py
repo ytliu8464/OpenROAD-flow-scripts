@@ -123,14 +123,25 @@ def render_ppa(csv_path: Path, out_path: Path) -> None:
                      and rw["method"] == method),
                     {},
                 )
+                # Absolute deltas use native units:
+                #   WNS / TNS in ns       (3 dp)
+                #   rWL       in um       (integer)
+                #   Power     in mW       (3 dp; raw value is in W)
+                # Runtime intentionally omitted from the LaTeX row -- see
+                # paper Sec. PPA discussion.  ``wm_runtime_s`` is still
+                # populated in the JSON / CSV for downstream consumers.
+                dpower_w = r.get("dPower")
+                try:
+                    dpower_mw = float(dpower_w) * 1000.0 if dpower_w not in (None, "") else dpower_w
+                except Exception:
+                    dpower_mw = dpower_w
                 cells = [
                     b.paper_label,
                     method,
-                    _fmt(r.get("dWNS")),
-                    _fmt(r.get("dTNS")),
-                    _fmt(r.get("dRWL")),
-                    _fmt(r.get("dPower")),
-                    _fmt(r.get("dRuntime")),
+                    _fmt(r.get("dWNS"), 3),
+                    _fmt(r.get("dTNS"), 3),
+                    _fmt(r.get("dRWL"), 0),
+                    _fmt(dpower_mw, 3),
                     _fmt_sci(r.get("Pc")),
                 ]
                 f.write(" & ".join(cells) + " \\\\\n")
@@ -286,6 +297,26 @@ def render_attack(csv_path: Path, out_path: Path,
                     f.write(" & ".join(str(c) for c in cells) + " \\\\\n")
 
 
+def render_targeted_auc(csv_path: Path, out_path: Path,
+                        no_routing_platforms=("asap7",)) -> None:
+    """Render tab:targeted_auc -- one row per design with the cross-validated
+    classifier AUC for placement / cts / routing.  Routing AUC is '--' for
+    platforms with no wrong-way signal (ASAP7)."""
+    rows = list(csv.DictReader(open(csv_path)))
+    by_key = {(r["platform"], r["design"], r["stage"]): r for r in rows}
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(out_path, "w") as f:
+        for b in ACTIVE_BENCHES:
+            cells = [b.paper_label]
+            for stg in ("placement", "cts", "routing"):
+                if stg == "routing" and b.platform in no_routing_platforms:
+                    cells.append("--")
+                    continue
+                r = by_key.get((b.platform, b.design, stg), {})
+                cells.append(_fmt(r.get("auc")))
+            f.write(" & ".join(str(c) for c in cells) + " \\\\\n")
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--results-root",
@@ -325,6 +356,9 @@ def main() -> int:
         render_attack(root / "phase3" / "blind.csv",
                       root / "phase3" / "tab_blind_attack.tex",
                       ppa_csv=blind_ppa_csv)
+    if (root / "phase3" / "targeted_auc.csv").exists():
+        render_targeted_auc(root / "phase3" / "targeted_auc.csv",
+                            root / "phase3" / "tab_targeted_auc.tex")
     if (root / "phase3" / "targeted.csv").exists():
         # Paper-aligned tab:targeted_attack (§7.2): per-stage r-rates + r_all
         # + accept decision joined with the matching ΔPPA columns from
@@ -354,6 +388,7 @@ def main() -> int:
         "| tab:wrong-key        | phase2/tab_wrong_key.tex                          |\n"
         "| tab:sensitivity      | phase2/tab_sensitivity.tex                        |\n"
         "| tab:blind_attack     | phase3/tab_blind_attack.tex                       |\n"
+        "| tab:targeted_auc     | phase3/tab_targeted_auc.tex                       |\n"
         "| tab:targeted_attack  | phase3/tab_targeted_attack.tex                    |\n"
         "| fig:wrong_key_analysis | plots/wrong_key_analysis.png                   |\n"
     )

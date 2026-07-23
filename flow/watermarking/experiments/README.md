@@ -46,16 +46,13 @@ experiments/
 │   ├── run_r_only.sh             # Routing wrong-way bias + PPA continuation
 │   └── run_all_stage.sh          # Chained P → C → R + PPA
 │
-├── baselines/
-│   ├── _common.py                # Capacity lookup, HMAC object selection
+├── baselines/                    # each <name>/ has embed.py, verify.py, run.sh
+│   ├── _common.py                # Capacity lookup (K = PDMarks P-only), HMAC select
+│   ├── kahng/                    # Kahng et al. DAC'98 / TCAD'01 (row-parity)
 │   ├── cell_scattering/          # Cai et al. ISIC'07
-│   │   ├── embed.py
-│   │   ├── verify.py
-│   │   └── run.sh
-│   └── buffer_insertion/         # Sun et al. ISQED'06
-│       ├── embed.py
-│       ├── verify.py
-│       └── run.sh
+│   ├── buffer_insertion/         # Sun et al. ISQED'06
+│   ├── icmarks/                  # Zhang et al. TCAD'25 (post-DP re-impl)
+│   └── automarks/                # Zhang et al. MLCAD'24 (post-DP re-impl)
 │
 ├── sensitivity/
 │   ├── run_sensitivity.sh        # Sweep knobs on SweRV NG45 + SweRV ASAP7
@@ -95,7 +92,8 @@ experiments/
 ├── phase1_ppa.py                 # Δ-PPA + P_c per variant → raw/ppa_*.json
 ├── phase1_survival.py            # Verify watermark at 4 post-stage checkpoints
 ├── run_phase1_embeds.sh          # Fast embed-only pass (no full PPA round-trip)
-├── run_phase1_baselines.sh       # Run all baseline methods for all 10 designs
+├── run_baselines_all.sh          # All 5 baselines × 8 paper designs (40 ORFS flows)
+├── run_phase1_baselines.sh       # Legacy: cellscatter+bufins over 7-bench matrix
 ├── aggregate.py                  # Roll up raw JSON → per-phase CSV
 └── render_tex.py                 # CSV → copy-pasteable LaTeX row fragments
 ```
@@ -358,10 +356,34 @@ SKIP_PLACE=1 bash run_phase1_embeds.sh
 
 ### Step 1-4. Run baseline methods (Tables V & VI)
 
-Cell-scattering and buffer-insertion baselines for all 10 designs:
+**All 5 baselines × 8 paper designs (recommended).** `run_baselines_all.sh`
+chains every prior-work baseline — Kahng row-parity, Cell-scattering,
+Buffer-insertion, ICMarks, AutoMarks — over the exact 8 designs in
+`tab:ppa_ng45`/`tab:ppa_asap7` (NG45: JPEG, SweRV, Ariane, BP; ASAP7: JPEG,
+SweRV, CVA6, Ariane). Each method auto-re-execs inside Singularity, embeds its
+watermark on the reference ODB, runs `make wm_cts_and_route` (CTS + route +
+finish), and verifies at DRT. This is 40 full ORFS flows, so run it detached:
 
 ```bash
-bash run_phase1_baselines.sh           # both baselines, all 10 designs
+nohup bash run_baselines_all.sh > logs/baselines_all.log 2>&1 &
+# subsets:
+BASELINES="kahng icmarks" bash run_baselines_all.sh   # pick methods
+bash run_baselines_all.sh --only cell_scattering      # single method
+SKIP_DONE=1 bash run_baselines_all.sh                 # skip finished runs
+```
+
+Outputs land under `experiments/{results,logs}/<plat>/<nickname>/baseline-<method>/`
+(`baseline-{kahng,cellscatter,bufins,icmarks,automarks}`), exactly where
+`phase1_ppa.py` looks. BP is handled by passing `DESIGN=bp_multi_top` (config)
+with `DESIGN_NICKNAME=bp_multi` (results) — every `baselines/*/run.sh` honors
+`DESIGN_NICKNAME` for all filesystem paths (see §2b-1).
+
+**Legacy driver.** `run_phase1_baselines.sh` runs only Cell-scattering and
+Buffer-insertion over the original 7-bench matrix and is kept for backward
+compatibility:
+
+```bash
+bash run_phase1_baselines.sh           # cellscatter + bufins, 7 designs
 bash run_phase1_baselines.sh --skip-bufins      # cell-scattering only
 bash run_phase1_baselines.sh --skip-cellscatter # buffer-insertion only
 SKIP_DONE=1 bash run_phase1_baselines.sh        # skip already-finished runs
@@ -369,7 +391,13 @@ SKIP_DONE=1 bash run_phase1_baselines.sh        # skip already-finished runs
 
 Override the watermark capacity K (matched to PDMarks P-only by default):
 ```bash
-BASELINE_K=64 bash run_phase1_baselines.sh
+BASELINE_K=64 bash run_baselines_all.sh
+```
+
+After the runs finish, refresh the PPA tables:
+```bash
+python3.11 phase1_ppa.py && python3.11 aggregate.py --what ppa && python3.11 render_tex.py
+# baseline rows appear in results/phase1/tab_ppa_{nangate45,asap7}.tex
 ```
 
 ### Step 1-5. Compute Δ-PPA and P_c (tab:ppa_ng45, tab:ppa_asap7)
@@ -1002,41 +1030,42 @@ channel entirely for ASAP7 — only `r_P` and `r_C` contribute to `r_all` /
 
 ## 10. Baseline methods (Tables V & VI)
 
-Two baseline watermarking methods are implemented for comparison.
+Five prior-work baselines are implemented for comparison, one per row of
+`tab:ppa_ng45`/`tab:ppa_asap7`. Each has its own `baselines/<name>/{embed,verify}.py`
+and a `run.sh` that auto-re-execs inside Singularity, embeds on the reference
+ODB, runs `make wm_cts_and_route` (CTS + route + finish), and verifies at DRT.
+All five honor `DESIGN_NICKNAME` for filesystem paths (so BP works:
+`DESIGN=bp_multi_top`, `DESIGN_NICKNAME=bp_multi`).
 
-### Cell scattering — Cai et al. ISIC'07 (`baselines/cell_scattering/`)
+| Method | Ref | Variant | Source ODB | Selection domain |
+|---|---|---|---|---|
+| Kahng (row-parity) | KahngMMP98/LMM01 | `baseline-kahng` | `3_place.odb` | `kahng_row\0` + inst |
+| Cell-scattering | Cai et al. ISIC'07 | `baseline-cellscatter` | `3_place.odb` | `cellscatter\0` + inst |
+| Buffer-insertion | Sun et al. ISQED'06 | `baseline-bufins` | `4_cts.odb` | `bufins\0` + net |
+| ICMarks | Zhang et al. TCAD'25 | `baseline-icmarks` | `3_place.odb` | min-score region + keyed cells |
+| AutoMarks | Zhang et al. MLCAD'24 | `baseline-automarks` | `3_place.odb` | node-score heuristic + keyed cells |
 
-- **Embed**: loads `3_place.odb`, selects K cells via HMAC-SHA256(`seed_placement`, `"cellscatter\0" + name`), shifts each cell ±1 site to set X-column parity, re-legalizes.
-- **Flow continuation**: `make wm_cts_and_route` → `flow/watermarking/experiments/results/.../baseline-cellscatter/`
-- **Verify**: re-reads current X-column parity from ODB; compares against embed CSV.
+- **Kahng**: select K cells; shift y by ±1 row pitch to set row-index parity; legalize.
+- **Cell-scattering**: shift each selected cell ±1 site to set X-column parity; legalize.
+- **Buffer-insertion**: insert one extra buffer to flip each net's buffer-count parity; legalize.
+- **ICMarks / AutoMarks**: post-DP re-implementations (the original GW region search /
+  GNN scorer require DREAMPlace); select a low-cost region/center, then ±1-site DW shifts
+  on K keyed cells. See each `embed.py` docstring for the faithfulness notes.
 
-### Buffer insertion — Sun et al. ISQED'06 (`baselines/buffer_insertion/`)
+All five select `K = capacity_for(...)` matched to the PDMarks P-only accepted
+pair count (`baselines/_common.py`), so capacity is held equal across methods.
+Override for every design with `export BASELINE_K=<int>`.
 
-- **Embed**: loads `4_cts.odb`, selects K signal nets via HMAC-SHA256(`seed_routing`, `"bufins\0" + name`), inserts one extra buffer to flip each net's buffer-count parity, re-legalizes.
-- **Flow continuation**: `make wm_route_wrong_way` → `flow/watermarking/experiments/results/.../baseline-bufins/`
-- **Verify**: counts current buffers on selected nets; checks parity.
-
-### Capacity K (matched to PDMarks P-only accepted pair count)
-
-| Design | Platform | K source |
-|---|---|---|
-| AES | NG45 | `wm_place_order_embed_v2.csv` row count |
-| JPEG | NG45 | `wm_place_order_embed_v2.csv` row count |
-| SweRV | NG45 | `wm_place_order_embed_v2.csv` row count |
-| Ariane | NG45 | `wm_place_order_embed_v2.csv` row count |
-| AES | ASAP7 | `wm_place_order_embed_v2.csv` row count |
-| JPEG | ASAP7 | ~129 (from embed CSV) |
-| SweRV | ASAP7 | ~80 (from embed CSV) |
-
-Override all designs: `export BASELINE_K=64`
-
-### Baseline runbook (4 commands)
+### Baseline runbook
 
 ```bash
 cd OR0415/OpenROAD-flow-scripts/flow/watermarking/experiments
 
-# 1. Run 20 baseline flows (10 designs × 2 baselines; ~same wall-time as P-only)
-bash run_phase1_baselines.sh
+# 1. Run all 5 baselines × 8 paper designs = 40 flows (detached; hours)
+nohup bash run_baselines_all.sh > logs/baselines_all.log 2>&1 &
+#    subsets: BASELINES="kahng icmarks" bash run_baselines_all.sh
+#             bash run_baselines_all.sh --only cell_scattering
+#             SKIP_DONE=1 bash run_baselines_all.sh
 
 # 2. Compute Δ-PPA + P_c (also updates PDMarks rows if not yet done)
 python3.11 phase1_ppa.py
@@ -1046,6 +1075,33 @@ python3.11 aggregate.py --what ppa
 
 # 4. Render LaTeX row fragments
 python3.11 render_tex.py
-# → results/phase1/tab_ppa_nangate45.tex  (paste into Table V)
-# → results/phase1/tab_ppa_asap7.tex      (paste into Table VI)
+# → results/phase1/tab_ppa_nangate45.tex  (paste baseline rows into tab:ppa_ng45)
+# → results/phase1/tab_ppa_asap7.tex      (paste baseline rows into tab:ppa_asap7)
 ```
+
+> The legacy `run_phase1_baselines.sh` (cell-scattering + buffer-insertion only,
+> 7-bench matrix) is kept for backward compatibility; prefer `run_baselines_all.sh`.
+
+### Baseline full-flow survival (tab:survival_baseline)
+
+`baseline_survival.py` measures each baseline's extraction rate `r = accepted/K`
+at the four PD checkpoints (post-place / post-CTS / post-GRT / post-DRT) by
+running each method's own `verify.py` (read-only) on the checkpoint ODBs the
+baseline flow already left on disk — **no OpenROAD flow re-runs**. Run after
+`run_baselines_all.sh`:
+
+```bash
+python3.11 baseline_survival.py                      # all 5 methods, 8 designs
+python3.11 baseline_survival.py --methods buffer_insertion   # subset
+# writes results/phase1/baseline_survival.csv (upserted per cell)
+```
+
+Checkpoint→ODB: placement baselines use `3_place_<suffix>.odb` / `4_cts.odb` /
+`5_1_grt.odb` / `5_route.odb`; buffer-insertion (CTS-stage) uses
+`4_cts_bufins.odb` for post-CTS and has `n/a` at post-place. A cell is
+`no_claims` (→ n/a) when the embedder committed no surviving watermark (e.g.
+AutoMarks whose region heuristic was too small). The table is hand-built into
+`tab:survival_baseline` in main.tex from this CSV.
+
+<!-- /home/yil375/.claude/projects/-home-fetzfs-projects-MISC-ytliu-watermarking/3560d185-3505-4d4d-8deb-712b9c904224.json
+-->

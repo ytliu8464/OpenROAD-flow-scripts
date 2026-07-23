@@ -1,8 +1,0 @@
-platform,design,variant,paper_label,n_std_cells,n_macros,n_nets,tcp_ns,wns_ns,tns_ns,rwl_um,power_w,runtime_s
-nangate45,aes,watermarking-test1,AES (NG45),14924,0,15253,0.82,-0.0164295,-0.145757,223854.0,0.435977,391.3
-nangate45,jpeg,watermarking-test1,JPEG (NG45),60632,0,71673,1.0,-0.14087,-35.433,581986.0,0.591543,1433.1699999999998
-nangate45,swerv_wrapper,base,SweRV (NG45),102834,28,109728,2.0,-0.28287,-365.187,3844113.0,0.274031,5279.09
-nangate45,ariane136,base_tcp3p5,Ariane (NG45),190249,136,201413,3.5,-0.0277955,-0.524112,7688658.0,0.254001,7977.58
-asap7,aes,base,AES (ASAP7),15428,0,15228,380.0,-9.61267,-30.5106,52911.0,0.152594,662.73
-asap7,jpeg,base_tcp540,JPEG (ASAP7),65038,0,71522,540.0,-19.9523,-939.737,161844.0,0.175285,2099.8199999999997
-asap7,swerv_wrapper,base_tcp1455,SweRV (ASAP7),136208,28,115596,1455.0,-64.9846,-3338.4,1133210.0,0.0938654,12687.109999999999

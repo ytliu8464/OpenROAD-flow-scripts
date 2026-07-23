@@ -202,6 +202,30 @@ def _load_json(p: Path) -> dict:
         return {}
 
 
+def _normalize_timing_to_ns(rm: "RefMetrics") -> None:
+    """Convert ASAP7's picosecond timing fields to nanoseconds *in place*.
+
+    ORFS reports ``finish__timing__setup__ws`` / ``__tns`` and the
+    ``clock_period.txt`` value in whatever unit the platform's SDC uses.
+    NanGate45 uses nanoseconds; ASAP7 uses picoseconds.  Without this fix
+    the same column name ``wns_ns`` would mean ns on NG45 and ps on ASAP7,
+    which produced misleading ASAP7 ΔWNS/ΔTNS values in tab:ppa_asap7
+    (e.g. ``34.738`` for SweRV/AutoMarks read as 34.7 ns of slack drop
+    on a 1.46 ns clock — actually 0.035 ns once converted).
+
+    Call this from every metric-loader before returning the ``RefMetrics``
+    so every downstream consumer sees consistent nanosecond units.
+    """
+    if rm.platform != "asap7":
+        return
+    if rm.wns_ns is not None:
+        rm.wns_ns *= 1e-3
+    if rm.tns_ns is not None:
+        rm.tns_ns *= 1e-3
+    if rm.tcp_ns is not None:
+        rm.tcp_ns *= 1e-3
+
+
 def _read_clock_period(results_dir: Path) -> Optional[float]:
     cp = results_dir / "clock_period.txt"
     if cp.exists():
@@ -340,6 +364,7 @@ def load_wm_metrics(module: str, platform: str, design: str,
     if have_any:
         rm.runtime_s = total
 
+    _normalize_timing_to_ns(rm)
     return rm
 
 
@@ -414,6 +439,7 @@ def load_experiment_metrics(platform: str, design: str,
     if have_any:
         rm.runtime_s = total
 
+    _normalize_timing_to_ns(rm)
     return rm
 
 
@@ -494,6 +520,7 @@ def load_reference(platform: str, design: str, variant: str) -> RefMetrics:
     if have_any:
         rm.runtime_s = total
 
+    _normalize_timing_to_ns(rm)
     return rm
 
 

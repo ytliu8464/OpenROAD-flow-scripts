@@ -99,7 +99,8 @@ def aggregate_ppa() -> List[Path]:
     for plat in ("nangate45", "asap7"):
         out_csv = RESULTS / "phase1" / f"ppa_{plat}.csv"
         fields = ["platform", "design", "variant", "method",
-                  "dWNS", "dTNS", "dRWL", "dPower", "dRuntime", "Pc"]
+                  "dWNS", "dTNS", "dRWL", "dPower", "dRuntime",
+                  "wm_runtime_s", "Pc"]
         with open(out_csv, "w", newline="") as f:
             wr = csv.DictWriter(f, fieldnames=fields)
             wr.writeheader()
@@ -279,6 +280,45 @@ def aggregate_targeted() -> Path:
     return out_csv
 
 
+def aggregate_targeted_auc() -> Path:
+    """Roll the cached per-(bench,stage) classifier diagnostics into
+    results/phase3/targeted_auc.csv -- one row per (platform, design, stage)
+    with the cross-validated AUC and precision-at-recall produced by
+    attacks/targeted/classify.py.  Feeds tab:targeted_auc.
+    """
+    raw = RESULTS / "phase3" / "raw" / "datasets"
+    rows = []
+    if raw.exists():
+        for p in sorted(raw.glob("diag_*.json")):
+            # diag_<platform>_<design>_<stage>.json
+            stem = p.stem[len("diag_"):]
+            try:
+                d = json.loads(p.read_text())
+            except Exception:
+                continue
+            stage = stem.rsplit("_", 1)[-1]
+            rest = stem[: -(len(stage) + 1)]
+            platform = rest.split("_", 1)[0]
+            design = rest.split("_", 1)[1] if "_" in rest else rest
+            rows.append({
+                "platform": platform, "design": design, "stage": stage,
+                "auc": d.get("auc", ""),
+                "precision_at_recall": d.get("precision_at_recall", ""),
+                "n": d.get("n", ""), "n_pos": d.get("n_pos", ""),
+                "note": d.get("note", ""),
+            })
+    out_csv = RESULTS / "phase3" / "targeted_auc.csv"
+    out_csv.parent.mkdir(parents=True, exist_ok=True)
+    fields = ["platform", "design", "stage", "auc",
+              "precision_at_recall", "n", "n_pos", "note"]
+    with open(out_csv, "w", newline="") as f:
+        wr = csv.DictWriter(f, fieldnames=fields)
+        wr.writeheader()
+        for r in rows:
+            wr.writerow({k: r.get(k, "") for k in fields})
+    return out_csv
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--what", default="all",
@@ -299,6 +339,7 @@ def main() -> int:
         p = aggregate_blind();         print(f"[aggregate] {p}")
     if args.what in ("all", "targeted"):
         p = aggregate_targeted();      print(f"[aggregate] {p}")
+        p = aggregate_targeted_auc();  print(f"[aggregate] {p}")
     return 0
 
 

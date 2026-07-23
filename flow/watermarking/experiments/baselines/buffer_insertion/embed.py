@@ -54,6 +54,9 @@ from _common import (  # noqa: E402
 
 _T0 = time.time()
 
+# Monotonic counter for flat, SPEF-safe inserted instance/net names.
+_BUF_IDX = 0
+
 
 def _log(msg: str) -> None:
     print(f"[{time.strftime('%H:%M:%S')} +{time.time()-_T0:6.1f}s] [bufins:embed] {msg}", flush=True)
@@ -77,18 +80,20 @@ def _buf_master_name(platform: str) -> str:
 # ODB helpers
 # ---------------------------------------------------------------------------
 
+# This OpenROAD build's odb does not export the dbSigType / dbIoType enums to
+# Python (`from odb import dbSigType` raises ImportError, same as
+# dbPlacementStatus).  The getSigType()/getIoType() accessors return objects
+# whose str() yields "CLOCK"/"POWER"/"OUTPUT"/... so we compare as strings,
+# matching the working PDMarks code in cts_v2/place_ordering.
+
 def _is_clock_net(net) -> bool:
     """True if net carries a clock signal (SigType == CLOCK)."""
-    from odb import dbSigType
-    return net.getSigType() == dbSigType.CLOCK
+    return str(net.getSigType()).upper() == "CLOCK"
 
 
 def _is_special(net) -> bool:
-    from odb import dbSigType
-    sig = net.getSigType()
-    # POWER and GROUND are "special"
-    from odb import dbSigType
-    return sig in (dbSigType.POWER, dbSigType.GROUND, dbSigType.TIEHI, dbSigType.TIELO)
+    # POWER and GROUND (and tie nets) are "special"
+    return str(net.getSigType()).upper() in ("POWER", "GROUND", "TIEHI", "TIELO")
 
 
 def _is_eligible_net(net) -> bool:
@@ -99,8 +104,8 @@ def _is_eligible_net(net) -> bool:
     if _is_clock_net(net):
         return False
     # Need at least one driver (output ITerms)
-    from odb import dbIoType
-    drivers = [it for it in net.getITerms() if it.getIoType() == dbIoType.OUTPUT]
+    drivers = [it for it in net.getITerms()
+               if str(it.getIoType()).upper() == "OUTPUT"]
     return len(drivers) >= 1
 
 
@@ -116,9 +121,8 @@ def _count_buf_instances(net) -> int:
 
 def _net_driver_bbox(net):
     """Return (cx, cy) centroid of the driver cell's bbox."""
-    from odb import dbIoType
     for iterm in net.getITerms():
-        if iterm.getIoType() == dbIoType.OUTPUT:
+        if str(iterm.getIoType()).upper() == "OUTPUT":
             inst = iterm.getInst()
             bb = inst.getBBox()
             return (bb.xMin() + bb.xMax()) // 2, (bb.yMin() + bb.yMax()) // 2
@@ -158,33 +162,41 @@ def _insert_buffer(block, net, buf_master, inst_name_prefix: str):
     import odb
 
     # Locate driver ITerms
-    from odb import dbIoType
-    driver_iterms = [it for it in net.getITerms() if it.getIoType() == dbIoType.OUTPUT]
+    driver_iterms = [it for it in net.getITerms()
+                     if str(it.getIoType()).upper() == "OUTPUT"]
     if not driver_iterms:
         raise RuntimeError(f"net {net.getName()} has no driver ITerms")
 
-    # Create new instance
-    unique_id = f"{inst_name_prefix}_{net.getName().replace('/', '_').replace('[', '_').replace(']', '_')}"
+    # Create new instance.  Use a flat, counter-based name: deriving the name
+    # from the (hierarchical) net name injects '.'/'[' into an INSTANCE name,
+    # which OpenROAD's RCX then writes as a malformed SPEF -> STA-1670 syntax
+    # error in the finish report (no WNS/TNS/power produced).  verify.py finds
+    # buffers by master prefix on the original net, so the name is free to change.
+    global _BUF_IDX
+    _BUF_IDX += 1
+    unique_id = f"{inst_name_prefix}_buf{_BUF_IDX}"
     new_inst = odb.dbInst.create(block, buf_master, unique_id)
 
     # Find buf input/output pins
     buf_in_mterm = None
     buf_out_mterm = None
     for mterm in buf_master.getMTerms():
-        from odb import dbIoType as IO
-        if mterm.getIoType() == IO.INPUT:
+        io = str(mterm.getIoType()).upper()
+        if io == "INPUT":
             buf_in_mterm = mterm
-        elif mterm.getIoType() == IO.OUTPUT:
+        elif io == "OUTPUT":
             buf_out_mterm = mterm
     if buf_in_mterm is None or buf_out_mterm is None:
         raise RuntimeError(f"cannot find input/output pins of {buf_master.getName()}")
 
-    # New sink net (carries original sinks)
-    new_net_name = net.getName() + "__bufins__"
+    # New sink net (carries original sinks).  Flat counter-based name for the
+    # same SPEF-safety reason as the instance above.
+    new_net_name = f"{inst_name_prefix}_net{_BUF_IDX}"
     new_net = odb.dbNet.create(block, new_net_name)
 
     # Disconnect all sink ITERMs from original net and reconnect to new net
-    sink_iterms = [it for it in list(net.getITerms()) if it.getIoType() != dbIoType.OUTPUT]
+    sink_iterms = [it for it in list(net.getITerms())
+                   if str(it.getIoType()).upper() != "OUTPUT"]
     for it in sink_iterms:
         it.disconnect()
         it.connect(new_net)
@@ -202,8 +214,7 @@ def _insert_buffer(block, net, buf_master, inst_name_prefix: str):
     )
     sx, sy = _snap_to_site(cx, cy, block)
     new_inst.setOrigin(sx, sy)
-    from odb import dbPlacementStatus
-    new_inst.setPlacementStatus(dbPlacementStatus.PLACED)
+    new_inst.setPlacementStatus("PLACED")
 
     return new_inst, new_net
 
@@ -239,16 +250,29 @@ def main(argv: List[str]) -> None:
     K = args.k if args.k > 0 else capacity_for(args.platform, args.design, args.variant)
     _log(f"K={K}  seed={seed[:4].hex()}...")
 
-    # Locate buffer master
+    # Locate buffer master.  In this OpenROAD build masters live in dbLib
+    # objects (dbTech has no findMaster); scan every lib.
+    db = block.getDataBase()
+
+    def _find_master(nm):
+        for lib in db.getLibs():
+            m = lib.findMaster(nm)
+            if m is not None:
+                return m
+        return None
+
     buf_mname = _buf_master_name(args.platform)
-    buf_master = block.getDataBase().getTech().findMaster(buf_mname)
+    buf_master = _find_master(buf_mname)
     if buf_master is None:
-        # Try searching via DB (layout db has Liberty cells)
-        db = block.getDataBase()
-        buf_master = db.findMaster(buf_mname)
-    if buf_master is None:
-        _log(f"WARNING: master {buf_mname!r} not found; trying BUF_X1")
-        buf_master = block.getDataBase().findMaster("BUF_X1")
+        # Fall back to the first BUF-prefixed master available in any lib.
+        _log(f"WARNING: master {buf_mname!r} not found; scanning for a BUF* master")
+        for lib in db.getLibs():
+            for m in lib.getMasters():
+                if m.getName().upper().startswith("BUF"):
+                    buf_master = m
+                    break
+            if buf_master is not None:
+                break
     if buf_master is None:
         raise RuntimeError(f"buffer master {buf_mname!r} not found in design DB")
     _log(f"buffer master: {buf_master.getName()}")

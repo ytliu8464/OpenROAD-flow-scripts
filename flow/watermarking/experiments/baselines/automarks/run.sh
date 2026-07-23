@@ -25,6 +25,7 @@ if [[ -z "${SINGULARITY_NAME:-}" ]]; then
     DESIGN="${DESIGN}" \
     PLATFORM="${PLATFORM}" \
     WM_FLOW_VARIANT="${WM_FLOW_VARIANT}" \
+    DESIGN_NICKNAME="${DESIGN_NICKNAME:-}" \
     FLOW_VARIANT="${FLOW_VARIANT:-baseline-automarks}" \
     BASELINE_K="${BASELINE_K:-}" \
     PROJ_DIR="${PROJ_DIR:-/home/fetzfs_projects/MISC-ytliu/watermarking}" \
@@ -45,6 +46,7 @@ export OPENROAD_EXE="${OPENROAD_EXE:-${PROJ_DIR}/OR0415/OpenROAD/build/bin/openr
 export FLOW_HOME="${FLOW_HOME:-${PROJ_DIR}/OR0415/OpenROAD-flow-scripts/flow}"
 export EXPERIMENTS_HOME="${EXPERIMENTS_HOME:-${FLOW_HOME}/watermarking/experiments}"
 export WM_RESULTS_HOME="${WM_RESULTS_HOME:-${EXPERIMENTS_HOME}/results}"
+export DESIGN_NICKNAME="${DESIGN_NICKNAME:-${DESIGN}}"
 export FLOW_VARIANT="${FLOW_VARIANT:-baseline-automarks}"
 
 WM_DIR="${FLOW_HOME}/watermarking"
@@ -57,8 +59,8 @@ if [[ -z "${DESIGN:-}" || -z "${PLATFORM:-}" || -z "${WM_FLOW_VARIANT:-}" ]]; th
   echo "ERROR: DESIGN, PLATFORM, WM_FLOW_VARIANT must be set" >&2; exit 2
 fi
 
-REF_RES="${FLOW_HOME}/results/${PLATFORM}/${DESIGN}/${WM_FLOW_VARIANT}"
-OUT_RES="${WM_RESULTS_HOME}/${PLATFORM}/${DESIGN}/${FLOW_VARIANT}"
+REF_RES="${FLOW_HOME}/results/${PLATFORM}/${DESIGN_NICKNAME}/${WM_FLOW_VARIANT}"
+OUT_RES="${WM_RESULTS_HOME}/${PLATFORM}/${DESIGN_NICKNAME}/${FLOW_VARIANT}"
 mkdir -p "${OUT_RES}"
 SEED_HEX="${GEN_KEY_DIR}/out/${DESIGN}/seed_placement.hex"
 
@@ -101,7 +103,7 @@ ${OPENROAD_EXE} -python -exit "${EMBED_SCRIPT}" \
 log "embed complete; watermarked ODB at ${OUT_ODB}"
 
 log "running CTS + route + finish via make wm_cts_and_route ..."
-INPUTS_DIR="${FLOW_HOME}/OR_inputs/place_wm/${PLATFORM}/${DESIGN}"
+INPUTS_DIR="${FLOW_HOME}/OR_inputs/place_wm/${PLATFORM}/${DESIGN_NICKNAME}"
 
 make -C "${FLOW_HOME}" \
   DESIGN_CONFIG="${FLOW_HOME}/designs/${PLATFORM}/${DESIGN}/config.mk" \

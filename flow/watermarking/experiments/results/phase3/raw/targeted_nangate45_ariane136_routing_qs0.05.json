@@ -1,7 +1,0 @@
-{
-  "platform": "nangate45",
-  "design": "ariane136",
-  "stage": "routing",
-  "q_s": 0.05,
-  "note": "missing artifacts"
-}

@@ -1,0 +1,26 @@
+# cd /home/fetzfs_projects/MISC-ytliu/watermarking/OR0415/OpenROAD-flow-scripts/flow/watermarking/experiments before running. Each line is independent -> distribute across servers.
+# REQUIRED: these change at native capacity (kahng K=1792, icmarks K=200, automarks K=200 w/ region-fit fix)
+DESIGN=jpeg PLATFORM=nangate45 WM_FLOW_VARIANT=watermarking-test1 BASELINE_K=1792 FLOW_VARIANT=baseline-kahng bash baselines/kahng/run.sh
+DESIGN=swerv_wrapper PLATFORM=nangate45 WM_FLOW_VARIANT=base BASELINE_K=1792 FLOW_VARIANT=baseline-kahng bash baselines/kahng/run.sh
+DESIGN=ariane136 PLATFORM=nangate45 WM_FLOW_VARIANT=base_tcp3p5 BASELINE_K=1792 FLOW_VARIANT=baseline-kahng bash baselines/kahng/run.sh
+DESIGN=bp_multi_top PLATFORM=nangate45 WM_FLOW_VARIANT=base_tcp3p2 BASELINE_K=1792 FLOW_VARIANT=baseline-kahng bash baselines/kahng/run.sh
+DESIGN=jpeg PLATFORM=asap7 WM_FLOW_VARIANT=base_tcp540 BASELINE_K=1792 FLOW_VARIANT=baseline-kahng bash baselines/kahng/run.sh
+DESIGN=swerv_wrapper PLATFORM=asap7 WM_FLOW_VARIANT=base_tcp1455 BASELINE_K=1792 FLOW_VARIANT=baseline-kahng bash baselines/kahng/run.sh
+DESIGN=cva6 PLATFORM=asap7 WM_FLOW_VARIANT=base_tcp950 BASELINE_K=1792 FLOW_VARIANT=baseline-kahng bash baselines/kahng/run.sh
+DESIGN=ariane PLATFORM=asap7 WM_FLOW_VARIANT=base_fixed BASELINE_K=1792 FLOW_VARIANT=baseline-kahng bash baselines/kahng/run.sh
+DESIGN=jpeg PLATFORM=nangate45 WM_FLOW_VARIANT=watermarking-test1 BASELINE_K=200 FLOW_VARIANT=baseline-icmarks bash baselines/icmarks/run.sh
+DESIGN=swerv_wrapper PLATFORM=nangate45 WM_FLOW_VARIANT=base BASELINE_K=200 FLOW_VARIANT=baseline-icmarks bash baselines/icmarks/run.sh
+DESIGN=ariane136 PLATFORM=nangate45 WM_FLOW_VARIANT=base_tcp3p5 BASELINE_K=200 FLOW_VARIANT=baseline-icmarks bash baselines/icmarks/run.sh
+DESIGN=bp_multi_top PLATFORM=nangate45 WM_FLOW_VARIANT=base_tcp3p2 BASELINE_K=200 FLOW_VARIANT=baseline-icmarks bash baselines/icmarks/run.sh
+DESIGN=jpeg PLATFORM=asap7 WM_FLOW_VARIANT=base_tcp540 BASELINE_K=200 FLOW_VARIANT=baseline-icmarks bash baselines/icmarks/run.sh
+DESIGN=swerv_wrapper PLATFORM=asap7 WM_FLOW_VARIANT=base_tcp1455 BASELINE_K=200 FLOW_VARIANT=baseline-icmarks bash baselines/icmarks/run.sh
+DESIGN=cva6 PLATFORM=asap7 WM_FLOW_VARIANT=base_tcp950 BASELINE_K=200 FLOW_VARIANT=baseline-icmarks bash baselines/icmarks/run.sh
+DESIGN=ariane PLATFORM=asap7 WM_FLOW_VARIANT=base_fixed BASELINE_K=200 FLOW_VARIANT=baseline-icmarks bash baselines/icmarks/run.sh
+DESIGN=jpeg PLATFORM=nangate45 WM_FLOW_VARIANT=watermarking-test1 BASELINE_K=200 FLOW_VARIANT=baseline-automarks bash baselines/automarks/run.sh
+DESIGN=swerv_wrapper PLATFORM=nangate45 WM_FLOW_VARIANT=base BASELINE_K=200 FLOW_VARIANT=baseline-automarks bash baselines/automarks/run.sh
+DESIGN=ariane136 PLATFORM=nangate45 WM_FLOW_VARIANT=base_tcp3p5 BASELINE_K=200 FLOW_VARIANT=baseline-automarks bash baselines/automarks/run.sh
+DESIGN=bp_multi_top PLATFORM=nangate45 WM_FLOW_VARIANT=base_tcp3p2 BASELINE_K=200 FLOW_VARIANT=baseline-automarks bash baselines/automarks/run.sh
+DESIGN=jpeg PLATFORM=asap7 WM_FLOW_VARIANT=base_tcp540 BASELINE_K=200 FLOW_VARIANT=baseline-automarks bash baselines/automarks/run.sh
+DESIGN=swerv_wrapper PLATFORM=asap7 WM_FLOW_VARIANT=base_tcp1455 BASELINE_K=200 FLOW_VARIANT=baseline-automarks bash baselines/automarks/run.sh
+DESIGN=cva6 PLATFORM=asap7 WM_FLOW_VARIANT=base_tcp950 BASELINE_K=200 FLOW_VARIANT=baseline-automarks bash baselines/automarks/run.sh
+DESIGN=ariane PLATFORM=asap7 WM_FLOW_VARIANT=base_fixed BASELINE_K=200 FLOW_VARIANT=baseline-automarks bash baselines/automarks/run.sh

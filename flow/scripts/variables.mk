@@ -116,7 +116,8 @@ YOSYS_IS_VALID := $(if $(YOSYS_EXE),$(shell test -x $(YOSYS_EXE) && echo "true")
 KLAYOUT_DIR = $(abspath $(FLOW_HOME)/../tools/install/klayout/)
 KLAYOUT_BIN_FROM_DIR = $(KLAYOUT_DIR)/klayout
 
-KEPLER_FORMAL_EXE ?= $(abspath $(FLOW_HOME)/../tools/install/kepler-formal/bin/kepler-formal)
+# KEPLER_FORMAL_EXE ?= $(abspath $(FLOW_HOME)/../tools/install/kepler-formal/bin/kepler-formal)
+KEPLER_FORMAL_EXE ?= $(/home/fetzfs_projects/MISC-ytliu/watermarking/OR0415/kepler-formal/build/src/bin/kepler-formal)
 export KEPLER_FORMAL_EXE
 
 ifeq ($(wildcard $(KLAYOUT_BIN_FROM_DIR)), $(KLAYOUT_BIN_FROM_DIR))

@@ -44,6 +44,7 @@ if [[ -z "${SINGULARITY_NAME:-}" ]]; then
     FLOW_VARIANT="${FLOW_VARIANT}" \
     WM_RESULTS="${WM_RESULTS}" \
     CTS_ODB="${CTS_ODB}" \
+    NUM_CORES="${NUM_CORES:-}" \
     bash -lc "bash \"${BASH_SOURCE[0]}\""
 fi
 

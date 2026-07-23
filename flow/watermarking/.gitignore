@@ -1,0 +1,24 @@
+# This repo holds the watermarking FRAMEWORK only.
+# All experimental output stays on the compute server, never in git.
+
+# Flow run artifacts (~463 GB on disk)
+logs/
+objects/
+reports/
+results/
+wm_log/
+backup/
+
+# Generated figures, tables and stray capture files
+experiments/plots/
+experiments/node
+
+# Key material and derived watermark seeds — NEVER commit.
+# Regenerate locally with gen_key/gen_key.sh
+gen_key/keys/
+gen_key/out/
+
+# Editor / OS noise
+.DS_Store
+*.pyc
+__pycache__/
