@@ -1,0 +1,25 @@
+# Python dependencies for the PDMarks watermarking framework.
+#   pip install -r requirements.txt
+#
+# The embedders and verifiers run inside OpenROAD's bundled Python and need
+# nothing beyond the standard library -- including when they open an AES-256-GCM
+# watermark certificate, which uses the vendored wm_aesgcm.py.  That is not a
+# stylistic choice: `openroad -python` is reached through `singularity exec -e`
+# with PYTHONPATH reset, so a host `pip install` is invisible to it, and the
+# 3.12 standard library has no AEAD.
+#
+# `cryptography` is therefore OPTIONAL for the certificate: it is preferred when
+# importable (OpenSSL-backed, constant-time, much faster) and the vendored
+# implementation is used otherwise.  Both are pinned to the same NIST CAVP
+# vectors and cross-checked against each other by certificate/tests/.
+#
+# It remains REQUIRED for gen_key/, which does Ed25519 signing and has no
+# stdlib fallback (PyNaCl is accepted as an alternative backend).
+
+# --- required by gen_key/; optional but preferred for certificate/ ----------
+cryptography>=42          # PyNaCl is supported as a fallback backend
+
+# --- required by experiments/ ----------------------------------------------
+numpy>=1.24               # routing randomization test (lib/route_stat.py)
+scikit-learn>=1.3         # targeted-attack classifier (attacks/targeted/)
+matplotlib>=3.7           # figures (wrong_key/, attacks/blind/)

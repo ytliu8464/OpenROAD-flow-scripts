@@ -1507,6 +1507,30 @@
       "route"
     ]
   },
+  "WATERMARK": {
+    "default": 0,
+    "description": "Enables PDMarks watermarking. When set to 1 the flow embeds keyed ownership evidence at three stages: the x-order of same-row cell pairs after detailed placement, leaf-clock-buffer fanout parity after CTS, and a wrong-way routing bias applied by the detailed router. Requires an OpenROAD build providing the wmk module. See docs/user/Watermarking.md.\n",
+    "type": "int"
+  },
+  "WATERMARK_FRACTION": {
+    "default": 0.02,
+    "description": "Fraction of eligible signal nets selected for the routing watermark. Each net is an independent keyed Bernoulli draw, so the realized count varies around this value.\n",
+    "type": "float"
+  },
+  "WATERMARK_P": {
+    "default": 0.4,
+    "description": "Quantile cutoff used by report_routing_watermark when classifying a net as carrying the watermark.\n",
+    "type": "float"
+  },
+  "WATERMARK_STRENGTH": {
+    "default": 100.0,
+    "description": "Multiplier applied to the non-preferred-direction grid cost when the detailed router routes a watermarked net. Larger values suppress wrong-way wiring more strongly. A value of 1 disables the bias while still tagging nets, which is the control case for measuring the watermark's effect.\n",
+    "type": "float"
+  },
+  "WM_OWNER_ID": {
+    "default": "pdmarks-owner",
+    "description": "Owner identity bound into the watermark key bundle and recorded in the certificate.\n"
+  },
   "WRITE_ODB_AND_SDC_EACH_STAGE": {
     "default": 1,
     "description": "Save out .sdc and .odb file after each stage, useful to disable when using a single OpenROAD instance to run all stages of the flow.\n",

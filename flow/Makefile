@@ -58,7 +58,7 @@
 # DESIGN_CONFIG=./designs/asap7/ethmac/config.mk
 # DESIGN_CONFIG=./designs/asap7/gcd/config.mk
 # DESIGN_CONFIG=./designs/asap7/ibex/config.mk
-# DESIGN_CONFIG=./designs/asap7/jpeg/config.mk
+DESIGN_CONFIG=./designs/asap7/jpeg/config.mk
 # DESIGN_CONFIG=./designs/asap7/megaboom/config.mk
 # DESIGN_CONFIG=./designs/asap7/riscv32i/config.mk
 # DESIGN_CONFIG=./designs/asap7/swerv_wrapper/config.mk
@@ -506,7 +506,13 @@ clean_resize:
 #-------------------------------------------------------------------------------
 $(eval $(call do-step,3_5_place_dp,$(RESULTS_DIR)/3_4_place_resized.odb,detail_place))
 
+# With WATERMARK=1 the blessed placement comes from the watermark substep,
+# which consumes 3_5_place_dp.odb.  See watermark.mk.
+ifeq ($(WATERMARK),1)
+$(eval $(call do-copy,3_place,3_6_place_wm.odb,))
+else
 $(eval $(call do-copy,3_place,3_5_place_dp.odb,))
+endif
 
 # detail_place writes 3_place.sdc alongside 3_5_place_dp.odb (constraints
 # are unchanged during placement), mirroring how synth writes 1_synth.sdc.
@@ -545,7 +551,12 @@ $(eval $(call do-step,4_1_cts,$(RESULTS_DIR)/3_place.odb $(RESULTS_DIR)/3_place.
 
 $(RESULTS_DIR)/4_cts.sdc: $(RESULTS_DIR)/4_cts.odb
 
+# With WATERMARK=1 the blessed CTS result comes from the watermark substep.
+ifeq ($(WATERMARK),1)
+$(eval $(call do-copy,4_cts,4_2_cts_wm.odb))
+else
 $(eval $(call do-copy,4_cts,4_1_cts.odb))
+endif
 
 .PHONY: do-cts
 do-cts:
@@ -884,5 +895,7 @@ run-yosys:
 # Utilities
 #-------------------------------------------------------------------------------
 include $(UTILS_DIR)/utils.mk
+# PDMarks watermarking; inert unless WATERMARK=1.
+include $(FLOW_HOME)/watermark.mk
 export PRIVATE_DIR ?= ../../private_tool_scripts
 -include $(PRIVATE_DIR)/private.mk

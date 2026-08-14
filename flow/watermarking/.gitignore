@@ -1,0 +1,23 @@
+# This directory holds the watermarking FRAMEWORK only.
+# Flow outputs and key material stay on the machine that produced them.
+
+# ORFS / experiment run artifacts
+logs/
+objects/
+reports/
+results/
+wm_log/
+
+# Generated figures and tables
+experiments/plots/
+
+# Key material and derived watermark seeds -- NEVER commit.
+# Regenerate locally with gen_key/gen_key.sh (see gen_key/README.md).
+gen_key/keys/
+gen_key/out/
+gen_key/registry.json
+
+# Editor / OS noise
+.DS_Store
+*.pyc
+__pycache__/

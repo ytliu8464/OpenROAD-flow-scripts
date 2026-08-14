@@ -1644,3 +1644,38 @@ GRT_SEED:
     - grt
   tunable: 1
   type: int
+WATERMARK:
+  description: >
+    Enables PDMarks watermarking. When set to 1 the flow embeds keyed ownership
+    evidence at three stages: the x-order of same-row cell pairs after detailed
+    placement, leaf-clock-buffer fanout parity after CTS, and a wrong-way
+    routing bias applied by the detailed router. Requires an OpenROAD build
+    providing the wmk module. See docs/user/Watermarking.md.
+  default: 0
+  type: int
+WATERMARK_FRACTION:
+  description: >
+    Fraction of eligible signal nets selected for the routing watermark. Each
+    net is an independent keyed Bernoulli draw, so the realized count varies
+    around this value.
+  default: 0.02
+  type: float
+WATERMARK_STRENGTH:
+  description: >
+    Multiplier applied to the non-preferred-direction grid cost when the
+    detailed router routes a watermarked net. Larger values suppress wrong-way
+    wiring more strongly. A value of 1 disables the bias while still tagging
+    nets, which is the control case for measuring the watermark's effect.
+  default: 100.0
+  type: float
+WATERMARK_P:
+  description: >
+    Quantile cutoff used by report_routing_watermark when classifying a net as
+    carrying the watermark.
+  default: 0.4
+  type: float
+WM_OWNER_ID:
+  description: >
+    Owner identity bound into the watermark key bundle and recorded in the
+    certificate.
+  default: pdmarks-owner
