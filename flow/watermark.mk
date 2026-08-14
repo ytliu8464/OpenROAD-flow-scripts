@@ -108,18 +108,32 @@ do-4_2_cts_wm:
 # ==============================================================================
 # VERIFY / CERTIFY
 # ==============================================================================
+# Ownership is decided by extraction rate against a threshold, not by whether
+# every single claim survived: routing and filling legitimately disturb a few
+# marked objects.  The stage verifiers exit 2 as soon as one claim fails, so
+# their exit status is recorded rather than propagated -- otherwise a design
+# with r_P = 0.99 would abort the run and never check CTS at all.
+WM_TAU ?= 0.75
+
 .PHONY: watermark_verify
 watermark_verify:
+	@mkdir -p $(LOG_DIR)
 	@echo "[INFO WMK-0101] Verifying placement watermark."
-	@OPENROAD_EXE="$(abspath $(OPENROAD_EXE))" \
+	-@OPENROAD_EXE="$(abspath $(OPENROAD_EXE))" \
 	WM_VERIFY_INPUT="$(abspath $(RESULTS_DIR)/6_final.odb)" \
 	WM_CELL_LIST="$(abspath $(WM_RESULTS)/wm_place_embed.csv)" \
-		$(WM_HOME)/placement_wm/place_wm.sh verify
+		$(WM_HOME)/placement_wm/place_wm.sh verify \
+		2>&1 | tee $(LOG_DIR)/watermark_verify_placement.log
 	@echo "[INFO WMK-0102] Verifying CTS watermark."
-	@OPENROAD_EXE="$(abspath $(OPENROAD_EXE))" \
+	-@OPENROAD_EXE="$(abspath $(OPENROAD_EXE))" \
 	WM_CTS_VERIFY_INPUT="$(abspath $(RESULTS_DIR)/6_final.odb)" \
 	WM_CELL_LIST="$(abspath $(WM_RESULTS)/wm_cts_embed.csv)" \
-		$(WM_HOME)/cts_wm/cts_wm.sh verify
+		$(WM_HOME)/cts_wm/cts_wm.sh verify \
+		2>&1 | tee $(LOG_DIR)/watermark_verify_cts.log
+	@$(WM_HOME)/wm_summarize_verify.sh \
+		"$(LOG_DIR)/watermark_verify_placement.log" \
+		"$(LOG_DIR)/watermark_verify_cts.log" \
+		"$(WM_TAU)"
 
 .PHONY: watermark_certify
 watermark_certify:
