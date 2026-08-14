@@ -44,6 +44,14 @@ export PRE_DETAIL_ROUTE_TCL  = $(WM_HOME)/routing_wm/pre_route_watermark.tcl
 export POST_DETAIL_ROUTE_TCL = $(WM_HOME)/routing_wm/post_route_watermark.tcl
 export WM_SEED_HEX           = $(WM_SEED_R)
 
+# Consumed by routing_wm/verify.tcl.  Defined here rather than next to the
+# verify target because "export NAME" ahead of the assignment exports an empty
+# value.  Absolute, since the verifier is not run from the flow directory.
+WM_TAU ?= 0.75
+WM_VERIFY_ODB ?= $(abspath $(RESULTS_DIR)/6_final.odb)
+export WM_TAU
+export WM_VERIFY_ODB
+
 # The embedders receive liberty and constraints straight from the flow rather
 # than rediscovering them.
 #
@@ -110,30 +118,13 @@ do-4_2_cts_wm:
 # ==============================================================================
 # Ownership is decided by extraction rate against a threshold, not by whether
 # every single claim survived: routing and filling legitimately disturb a few
-# marked objects.  The stage verifiers exit 2 as soon as one claim fails, so
-# their exit status is recorded rather than propagated -- otherwise a design
-# with r_P = 0.99 would abort the run and never check CTS at all.
-WM_TAU ?= 0.75
-
+# marked objects.  verify_watermark applies that rule directly, so this needs
+# no Python and no interpreter beyond OpenROAD itself.
 .PHONY: watermark_verify
 watermark_verify:
 	@mkdir -p $(LOG_DIR)
-	@echo "[INFO WMK-0101] Verifying placement watermark."
-	-@OPENROAD_EXE="$(abspath $(OPENROAD_EXE))" \
-	WM_VERIFY_INPUT="$(abspath $(RESULTS_DIR)/6_final.odb)" \
-	WM_CELL_LIST="$(abspath $(WM_RESULTS)/wm_place_embed.csv)" \
-		$(WM_HOME)/placement_wm/place_wm.sh verify \
-		2>&1 | tee $(LOG_DIR)/watermark_verify_placement.log
-	@echo "[INFO WMK-0102] Verifying CTS watermark."
-	-@OPENROAD_EXE="$(abspath $(OPENROAD_EXE))" \
-	WM_CTS_VERIFY_INPUT="$(abspath $(RESULTS_DIR)/6_final.odb)" \
-	WM_CELL_LIST="$(abspath $(WM_RESULTS)/wm_cts_embed.csv)" \
-		$(WM_HOME)/cts_wm/cts_wm.sh verify \
-		2>&1 | tee $(LOG_DIR)/watermark_verify_cts.log
-	@$(WM_HOME)/wm_summarize_verify.sh \
-		"$(LOG_DIR)/watermark_verify_placement.log" \
-		"$(LOG_DIR)/watermark_verify_cts.log" \
-		"$(WM_TAU)"
+	$(RUN_CMD) --log $(abspath $(LOG_DIR)/watermark_verify.log) --tee -- \
+		$(OPENROAD_CMD) -no_splash $(WM_HOME)/routing_wm/verify.tcl
 
 .PHONY: watermark_certify
 watermark_certify:

@@ -38,9 +38,31 @@ preferred direction.
 | Target | Description |
 | ----- | ----- |
 | `WATERMARK=1` | Run the flow with watermarks embedded. |
-| `watermark_verify` | Check the placement and CTS watermarks against `6_final.odb`. Exits non-zero if a claim does not hold. |
+| `watermark_verify` | Check the placement and CTS watermarks against `6_final.odb`. |
 | `watermark_certify` | Seal the accepted claims into an encrypted, timestamped certificate. |
 | `watermark_keygen` | Generate the owner keypair and per-design stage seeds without running the flow. |
+
+Ownership is decided by the extraction rate, the fraction of committed claims
+that still hold, against a threshold (`WM_TAU`, default 0.75). An exact match is
+not expected: routing and filling legitimately disturb a few marked objects. A
+design whose watermark survives intact typically scores well above the
+threshold, while an unmarked design scores near chance, around 0.5 for a binary
+carrier.
+
+Verification is a native OpenROAD command, so it needs no Python and works on
+any design outside the flow:
+
+```tcl
+read_db suspect.odb
+verify_watermark -placement_claims wm_place_embed.csv \
+                 -cts_claims wm_cts_embed.csv -tau 0.75
+```
+
+The same is available under `openroad -python`:
+
+```python
+design.getWatermark().verifyPlacement("wm_place_embed.csv")
+```
 
 ## Variables
 
