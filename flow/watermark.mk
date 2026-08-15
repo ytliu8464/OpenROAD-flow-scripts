@@ -93,7 +93,7 @@ do-3_6_place_wm:
 	$(call WM_EMBED_ENV,$(WM_SEED_P),$(RESULTS_DIR)/3_place.sdc) \
 	WM_INPUT="$(abspath $(RESULTS_DIR)/3_5_place_dp.odb)" \
 	WM_OUTPUT_ODB="$(abspath $(RESULTS_DIR)/3_6_place_wm.odb)" \
-	WM_OUTPUT_CELL_LIST="$(abspath $(WM_RESULTS)/wm_place_embed.csv)" \
+	WM_OUTPUT_CELL_LIST="$(abspath $(WM_RESULTS)/wm_place_order_embed.csv)" \
 	$(RUN_CMD) --log $(abspath $(LOG_DIR)/3_6_place_wm.log) --tee -- \
 		$(WM_HOME)/placement_wm/place_wm.sh embed
 
@@ -109,7 +109,7 @@ do-4_2_cts_wm:
 	$(call WM_EMBED_ENV,$(WM_SEED_C),$(RESULTS_DIR)/4_cts.sdc) \
 	WM_CTS_INPUT="$(abspath $(RESULTS_DIR)/4_1_cts.odb)" \
 	WM_CTS_OUTPUT_ODB="$(abspath $(RESULTS_DIR)/4_2_cts_wm.odb)" \
-	WM_CTS_OUTPUT_CSV="$(abspath $(WM_RESULTS)/wm_cts_embed.csv)" \
+	WM_CTS_OUTPUT_CSV="$(abspath $(WM_RESULTS)/wm_cts_pairs_embed.csv)" \
 	$(RUN_CMD) --log $(abspath $(LOG_DIR)/4_2_cts_wm.log) --tee -- \
 		$(WM_HOME)/cts_wm/cts_wm.sh embed
 

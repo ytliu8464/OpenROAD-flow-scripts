@@ -54,14 +54,14 @@ any design outside the flow:
 
 ```tcl
 read_db suspect.odb
-verify_watermark -placement_claims wm_place_embed.csv \
-                 -cts_claims wm_cts_embed.csv -tau 0.75
+verify_watermark -placement_claims wm_place_order_embed.csv \
+                 -cts_claims wm_cts_pairs_embed.csv -tau 0.75
 ```
 
 The same is available under `openroad -python`:
 
 ```python
-design.getWatermark().verifyPlacement("wm_place_embed.csv")
+design.getWatermark().verifyPlacement("wm_place_order_embed.csv")
 ```
 
 ## Variables
@@ -97,8 +97,8 @@ interpreter does not have it, point `GEN_KEY_PYTHON` at one that does.
 Embedding writes its accepted claims next to the stage results:
 
 ```
-wm_place_embed.csv    committed placement pairs and their target bits
-wm_cts_embed.csv      committed clock-buffer pairs and their target parities
+wm_place_order_embed.csv    committed placement pairs and their target bits
+wm_cts_pairs_embed.csv      committed clock-buffer pairs and their target parities
 watermark_nets.txt    the tagged net list
 ```
 

@@ -24,8 +24,8 @@ set tau [wm_env_or WM_TAU 0.75]
 
 set args {}
 foreach { opt file } [list \
-  -placement_claims $results/wm_place_embed.csv \
-  -cts_claims $results/wm_cts_embed.csv \
+  -placement_claims $results/wm_place_order_embed.csv \
+  -cts_claims $results/wm_cts_pairs_embed.csv \
 ] {
   if { [file exists $file] } {
     lappend args $opt $file

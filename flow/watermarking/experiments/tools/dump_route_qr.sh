@@ -13,5 +13,8 @@ source "${HERE}/../../wm_env.sh"
 : "${WM_QR_CSV:?WM_QR_CSV must be set}"
 
 wm_require_openroad
-exec wm_exec env WM_ODB="${WM_ODB}" WM_QR_CSV="${WM_QR_CSV}" \
+# Not "exec wm_exec": wm_exec is a shell function defined by wm_env.sh, and
+# exec only replaces the process with an external command, so it fails with
+# "wm_exec: not found".
+wm_exec env WM_ODB="${WM_ODB}" WM_QR_CSV="${WM_QR_CSV}" \
   "${OPENROAD_EXE}" -python -exit "${HERE}/dump_route_qr.py"
