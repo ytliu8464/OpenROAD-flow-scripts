@@ -66,6 +66,6 @@ report_cell_usage
 report_metrics 6 "finish"
 
 # Save a final image if openroad is compiled with the gui
-if {[ord::openroad_gui_compiled]} {
+if {[ord::openroad_gui_compiled] && [llength [info commands gui::show]]} {
     gui::show "source $::env(SCRIPTS_DIR)/save_images.tcl" false
 }
